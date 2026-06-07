@@ -36,6 +36,6 @@ const menuItems = [
 
 <style scoped>
 .v-btn {
-  margin: 0 4px;
+  margin: 0;
 }
 </style>

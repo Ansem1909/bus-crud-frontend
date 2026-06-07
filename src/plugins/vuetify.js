@@ -1,3 +1,4 @@
+import { ru } from 'vuetify/locale'
 import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
@@ -9,5 +10,9 @@ export default createVuetify({
   directives,
   theme: {
     defaultTheme: 'light',
+  },
+  locale: {
+    locale: 'ru',
+    messages: { ru },
   },
 })
