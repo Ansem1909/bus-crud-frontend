@@ -10,6 +10,20 @@ export default createVuetify({
   directives,
   theme: {
     defaultTheme: 'light',
+    themes: {
+      light: {
+        colors: {
+          primary: '#6AB0DE',
+          secondary: '#A8E6CF',
+          background: '#F8F9FC',
+          surface: '#FFFFFF',
+          accent: '#FFCF96',
+        },
+        font: {
+          family: 'Inter, sans-serif'
+        }
+      }
+    }
   },
   locale: {
     locale: 'ru',

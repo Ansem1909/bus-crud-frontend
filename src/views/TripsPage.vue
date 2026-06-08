@@ -1,77 +1,106 @@
 <template>
-  <div>
-
-    <v-row align="center" class="mb-4">
-      <v-col cols="4">
-        <v-text-field
-          type="date"
-          label="Дата рейсов"
-          v-model="selectedDate"
-          @update:model-value="filterTrips"
-          hide-details
-        />
-      </v-col>
-      <v-col cols="8" class="text-right">
-        <v-btn color="primary" @click="openAddDialog">
+  <div class="trips-page">
+    <div class="trips-page__header">
+      <div class="trips-page__filter">
+        <v-menu v-model="dateMenu" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
+          <template v-slot:activator="{ props }">
+            <v-text-field
+              v-bind="props"
+              label="Дата рейсов"
+              :model-value="formattedSelectedDate"
+              prepend-inner-icon="mdi-calendar"
+              readonly
+              hide-details
+              clearable
+              @click:clear="clearDate"
+            />
+          </template>
+          <v-date-picker
+            :model-value="selectedDate ? new Date(selectedDate) : null"
+            @update:model-value="onDateSelect"
+            :min="minDate ? new Date(minDate) : undefined"
+            :max="maxDate ? new Date(maxDate) : undefined"
+            :first-day-of-week="1"
+            locale="ru"
+          />
+        </v-menu>
+      </div>
+      <div class="trips-page__add-btn">
+        <v-btn
+          class="trips-page__btn"
+          color="primary"
+          @click="openAddDialog"
+        >
           <v-icon left>mdi-plus</v-icon>
           Добавить рейс
         </v-btn>
-      </v-col>
-    </v-row>
+      </div>
+    </div>
 
+    <div v-if="filteredTrips.length" class="trips-page__list">
+      <v-card
+        v-for="trip in filteredTrips"
+        :key="trip.id"
+        class="trips-page__card"
+        elevation="2"
+      >
+        <div class="trips-page__route">
+          <span class="trips-page__city">{{ getStationName(trip.departureStationId) }}</span>
+          <v-icon class="trips-page__arrow" size="small">mdi-arrow-right</v-icon>
+          <span class="trips-page__city">{{ getStationName(trip.arrivalStationId) }}</span>
+        </div>
 
-    <v-data-table
-      :headers="headers"
-      :items="filteredTrips"
-      item-value="id"
-      class="elevation-1"
-    >
+        <div class="trips-page__times">
+          <div class="trips-page__time-block trips-page__time-block--departure">
+            <span class="trips-page__time">{{ trip.departureTime }}</span>
+            <span class="trips-page__date">{{ trip.departureDate }}</span>
+          </div>
+          <div class="trips-page__time-block trips-page__time-block--arrival">
+            <span class="trips-page__time">{{ trip.arrivalTime }}</span>
+            <span class="trips-page__date">{{ trip.arrivalDate }}</span>
+          </div>
+        </div>
 
-      <template v-slot:item.departure="{ item }">
-        <div>{{ getStationName(item.departureStationId) }}</div>
-        <div class="text-caption">{{ item.departureDate }} {{ item.departureTime }}</div>
-      </template>
+        <v-divider class="trips-page__divider"></v-divider>
 
+        <div class="trips-page__details">
+          <div class="trips-page__bus">
+            <v-icon size="small" class="trips-page__icon">mdi-bus-side</v-icon>
+            {{ getBusPlate(trip.busId) }} ({{ getBusModelName(trip.busId) }})
+          </div>
+          <div class="trips-page__driver">
+            <v-icon size="small" class="trips-page__icon">mdi-account</v-icon>
+            {{ getDriverName(trip.driverId) }}
+          </div>
+        </div>
 
-      <template v-slot:item.arrival="{ item }">
-        <div>{{ getStationName(item.arrivalStationId) }}</div>
-        <div class="text-caption">{{ item.arrivalDate }} {{ item.arrivalTime }}</div>
-      </template>
+        <v-divider class="trips-page__divider"></v-divider>
 
+        <div class="trips-page__extra">
+          <div class="trips-page__travel-time">
+            <v-icon size="small" class="trips-page__icon">mdi-clock-outline</v-icon>
+            {{ computeTravelTime(trip) }}
+          </div>
+          <v-chip :color="getStatusColor(trip)" dark size="small">
+            {{ getStatusText(trip) }}
+          </v-chip>
+        </div>
 
-      <template v-slot:item.bus="{ item }">
-        <div>{{ getBusPlate(item.busId) }}</div>
-        <div class="text-caption">{{ getBusModelName(item.busId) }}</div>
-      </template>
+        <div class="trips-page__actions">
+          <v-btn icon variant="text" @click="editTrip(trip)">
+            <v-icon>mdi-pencil</v-icon>
+          </v-btn>
+          <v-btn icon variant="text" @click="deleteTrip(trip.id)">
+            <v-icon>mdi-delete</v-icon>
+          </v-btn>
+        </div>
+      </v-card>
+    </div>
 
-
-      <template v-slot:item.driver="{ item }">
-        {{ getDriverName(item.driverId) }}
-      </template>
-
-
-      <template v-slot:item.travelTime="{ item }">
-        {{ computeTravelTime(item) }}
-      </template>
-
-
-      <template v-slot:item.status="{ item }">
-        <v-chip :color="getStatusColor(item)" dark size="small">
-          {{ getStatusText(item) }}
-        </v-chip>
-      </template>
-
-
-      <template v-slot:item.actions="{ item }">
-        <v-icon size="small" class="me-2" @click="editTrip(item)">
-          mdi-pencil
-        </v-icon>
-        <v-icon size="small" @click="deleteTrip(item.id)">
-          mdi-delete
-        </v-icon>
-      </template>
-    </v-data-table>
-
+    <div v-else class="trips-page__empty">
+      <v-icon size="48" color="gray">mdi-bus-alert</v-icon>
+      <p class="trips-page__empty-text">Нет рейсов на выбранную дату</p>
+    </div>
 
     <v-dialog v-model="dialog" max-width="600">
       <v-card>
@@ -80,7 +109,7 @@
         </v-card-title>
         <v-card-text>
           <v-row>
-            <v-col cols="6">
+            <v-col cols="12" md="6">
               <v-select
                 label="Станция отправления"
                 :items="stationStore.stations"
@@ -91,7 +120,7 @@
                 required
               />
             </v-col>
-            <v-col cols="6">
+            <v-col cols="12" md="6">
               <v-select
                 label="Станция прибытия"
                 :items="stationStore.stations"
@@ -104,7 +133,7 @@
             </v-col>
           </v-row>
           <v-row>
-            <v-col cols="6">
+            <v-col cols="12" md="6">
               <v-select
                 label="Автобус"
                 :items="busesWithModel"
@@ -115,7 +144,7 @@
                 required
               />
             </v-col>
-            <v-col cols="6">
+            <v-col cols="12" md="6">
               <v-select
                 label="Водитель"
                 :items="driverStore.drivers"
@@ -128,7 +157,7 @@
             </v-col>
           </v-row>
           <v-row>
-            <v-col cols="6">
+            <v-col cols="12" md="6">
               <v-text-field
                 type="date"
                 label="Дата отправления"
@@ -136,7 +165,7 @@
                 required
               />
             </v-col>
-            <v-col cols="6">
+            <v-col cols="12" md="6">
               <v-text-field
                 type="time"
                 label="Время отправления"
@@ -146,7 +175,7 @@
             </v-col>
           </v-row>
           <v-row>
-            <v-col cols="6">
+            <v-col cols="12" md="6">
               <v-text-field
                 type="date"
                 label="Дата прибытия"
@@ -154,7 +183,7 @@
                 required
               />
             </v-col>
-            <v-col cols="6">
+            <v-col cols="12" md="6">
               <v-text-field
                 type="time"
                 label="Время прибытия"
@@ -175,116 +204,111 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useTripStore } from '../stores/useTripStore'
-import { useStationStore } from '../stores/useStationStore'
-import { useBusStore } from '../stores/useBusStore'
-import { useDriverStore } from '../stores/useDriverStore'
-import { useBusModelStore } from '../stores/useBusModelStore'
+  import { ref, computed } from 'vue'
+  import { useTripStore } from '../stores/useTripStore'
+  import { useStationStore } from '../stores/useStationStore'
+  import { useBusStore } from '../stores/useBusStore'
+  import { useDriverStore } from '../stores/useDriverStore'
+  import { useBusModelStore } from '../stores/useBusModelStore'
 
+  const tripStore = useTripStore()
+  const stationStore = useStationStore()
+  const busStore = useBusStore()
+  const driverStore = useDriverStore()
+  const busModelStore = useBusModelStore()
 
-const tripStore = useTripStore()
-const stationStore = useStationStore()
-const busStore = useBusStore()
-const driverStore = useDriverStore()
-const busModelStore = useBusModelStore()
-
-
-const selectedDate = ref(new Date().toISOString().slice(0, 10))
-
-
-const filteredTrips = computed(() => {
-  return tripStore.trips.filter(trip => trip.departureDate === selectedDate.value)
-})
-
-
-const headers = [
-  { title: 'Отправление', key: 'departure', sortable: false },
-  { title: 'Прибытие', key: 'arrival', sortable: false },
-  { title: 'Автобус', key: 'bus', sortable: false },
-  { title: 'Водитель', key: 'driver', sortable: false },
-  { title: 'Время в пути', key: 'travelTime', sortable: false },
-  { title: 'Статус', key: 'status', sortable: false },
-  { title: 'Действия', key: 'actions', sortable: false, align: 'center' },
-]
-
-
-const getStationName = (id) => {
-  const station = stationStore.stations.find(s => s.id === id)
-  return station ? station.name : '—'
-}
-
-const getDriverName = (id) => {
-  const driver = driverStore.drivers.find(d => d.id === id)
-  return driver ? driver.fullName : '—'
-}
-
-const getBusPlate = (busId) => {
-  const bus = busStore.buses.find(b => b.id === busId)
-  return bus ? bus.plateNumber : '—'
-}
-
-const getBusModelName = (busId) => {
-  const bus = busStore.buses.find(b => b.id === busId)
-  if (!bus) return '—'
-  const model = busModelStore.busModels.find(m => m.id === bus.busModelId)
-  return model ? model.name : '—'
-}
-
-
-const busesWithModel = computed(() => {
-  return busStore.buses.map(bus => {
-    const model = busModelStore.busModels.find(m => m.id === bus.busModelId)
-    const modelName = model ? model.name : '—'
-    return {
-      id: bus.id,
-      displayName: `${bus.plateNumber} (${modelName})`
-    }
+  const selectedDate = ref(new Date().toISOString().slice(0, 10))
+  const dateMenu = ref(false)
+  const formattedSelectedDate = computed(() => {
+    if (!selectedDate.value) return ''
+    const [year, month, day] = selectedDate.value.split('-')
+    const date = new Date(year, month - 1, day)
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
   })
-})
+  const minDate = ref(new Date().toISOString().slice(0, 10))
+  const maxDate = ref('2026-12-31')
+  const clearDate = () => {
+    selectedDate.value = ''
+    filterTrips()
+  }
 
+  const onDateSelect = (date) => {
+    if (date) {
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      selectedDate.value = `${year}-${month}-${day}`;
+    } else {
+      selectedDate.value = '';
+    }
+    dateMenu.value = false;
+    filterTrips();
+  }
 
-const computeTravelTime = (trip) => {
-  const dep = new Date(`${trip.departureDate}T${trip.departureTime}`)
-  const arr = new Date(`${trip.arrivalDate}T${trip.arrivalTime}`)
-  const diffHours = (arr - dep) / (1000 * 60 * 60)
-  return diffHours.toFixed(1) + ' ч'
-}
+  const filteredTrips = computed(() => {
+    if (!selectedDate.value) return tripStore.trips
+    return tripStore.trips.filter(trip => trip.departureDate === selectedDate.value)
+  })
 
+  const getStationName = (id) => {
+    const station = stationStore.stations.find(s => s.id === id)
+    return station ? station.name : '—'
+  }
 
-const getStatusText = (trip) => {
-  const now = new Date()
-  const dep = new Date(`${trip.departureDate}T${trip.departureTime}`)
-  const arr = new Date(`${trip.arrivalDate}T${trip.arrivalTime}`)
-  if (now >= dep && now < arr) return 'В пути'
-  if (now >= arr) return 'Выполнен'
-  return 'Ожидает'
-}
+  const getDriverName = (id) => {
+    const driver = driverStore.drivers.find(d => d.id === id)
+    return driver ? driver.fullName : '—'
+  }
 
-const getStatusColor = (trip) => {
-  const status = getStatusText(trip)
-  if (status === 'В пути') return 'orange'
-  if (status === 'Выполнен') return 'green'
-  return 'blue'
-}
+  const getBusPlate = (busId) => {
+    const bus = busStore.buses.find(b => b.id === busId)
+    return bus ? bus.plateNumber : '—'
+  }
 
+  const getBusModelName = (busId) => {
+    const bus = busStore.buses.find(b => b.id === busId)
+    if (!bus) return '—'
+    const model = busModelStore.busModels.find(m => m.id === bus.busModelId)
+    return model ? model.name : '—'
+  }
 
-const dialog = ref(false)
-const isEdit = ref(false)
-const form = ref({
-  departureStationId: null,
-  arrivalStationId: null,
-  busId: null,
-  driverId: null,
-  departureDate: selectedDate.value,
-  departureTime: '09:00',
-  arrivalDate: selectedDate.value,
-  arrivalTime: '13:00',
-})
+  const busesWithModel = computed(() => {
+    return busStore.buses.map(bus => {
+      const model = busModelStore.busModels.find(m => m.id === bus.busModelId)
+      const modelName = model ? model.name : '—'
+      return {
+        id: bus.id,
+        displayName: `${bus.plateNumber} (${modelName})`
+      }
+    })
+  })
 
-const openAddDialog = () => {
-  isEdit.value = false
-  form.value = {
+  const computeTravelTime = (trip) => {
+    const dep = new Date(`${trip.departureDate}T${trip.departureTime}`)
+    const arr = new Date(`${trip.arrivalDate}T${trip.arrivalTime}`)
+    const diffHours = (arr - dep) / (1000 * 60 * 60)
+    return diffHours.toFixed(1) + ' ч'
+  }
+
+  const getStatusText = (trip) => {
+    const now = new Date()
+    const dep = new Date(`${trip.departureDate}T${trip.departureTime}`)
+    const arr = new Date(`${trip.arrivalDate}T${trip.arrivalTime}`)
+    if (now >= dep && now < arr) return 'В пути'
+    if (now >= arr) return 'Выполнен'
+    return 'Ожидает'
+  }
+  const getStatusColor = (trip) => {
+    const status = getStatusText(trip)
+    if (status === 'В пути') return 'var(--color-secondary)'
+    if (status === 'Выполнен') return 'var(--color-primary)'
+    return 'var(--color-accent-warning)'
+  }
+
+  const dialog = ref(false)
+  const isEdit = ref(false)
+  const form = ref({
     departureStationId: null,
     arrivalStationId: null,
     busId: null,
@@ -293,43 +317,239 @@ const openAddDialog = () => {
     departureTime: '09:00',
     arrivalDate: selectedDate.value,
     arrivalTime: '13:00',
-  }
-  dialog.value = true
-}
+  })
 
-const editTrip = (trip) => {
-  isEdit.value = true
-  form.value = { ...trip }
-  dialog.value = true
-}
-
-const saveTrip = () => {
-
-  if (!form.value.departureStationId || !form.value.arrivalStationId ||
-    !form.value.busId || !form.value.driverId ||
-    !form.value.departureDate || !form.value.departureTime ||
-    !form.value.arrivalDate || !form.value.arrivalTime) {
-    alert('Заполните все поля')
-    return
+  const openAddDialog = () => {
+    isEdit.value = false
+    form.value = {
+      departureStationId: null,
+      arrivalStationId: null,
+      busId: null,
+      driverId: null,
+      departureDate: selectedDate.value || new Date().toISOString().slice(0, 10),
+      departureTime: '09:00',
+      arrivalDate: selectedDate.value || new Date().toISOString().slice(0, 10),
+      arrivalTime: '13:00',
+    }
+    dialog.value = true
   }
-  if (isEdit.value) {
-    tripStore.updateTrip(form.value.id, form.value)
-  } else {
-    tripStore.addTrip(form.value)
-  }
-  dialog.value = false
-}
 
-const deleteTrip = (id) => {
-  if (confirm('Удалить этот рейс?')) {
-    tripStore.deleteTrip(id)
+  const editTrip = (trip) => {
+    isEdit.value = true
+    form.value = { ...trip }
+    dialog.value = true
   }
-}
-const filterTrips = () => {}
+
+  const saveTrip = () => {
+    if (!form.value.departureStationId || !form.value.arrivalStationId ||
+      !form.value.busId || !form.value.driverId ||
+      !form.value.departureDate || !form.value.departureTime ||
+      !form.value.arrivalDate || !form.value.arrivalTime) {
+      alert('Заполните все поля')
+      return
+    }
+    if (isEdit.value) {
+      tripStore.updateTrip(form.value.id, form.value)
+    } else {
+      tripStore.addTrip(form.value)
+    }
+    dialog.value = false
+  }
+
+  const deleteTrip = (id) => {
+    if (confirm('Удалить этот рейс?')) {
+      tripStore.deleteTrip(id)
+    }
+  }
+
+  const filterTrips = () => {}
 </script>
 
-<style scoped>
-.text-right {
-  text-align: right;
-}
+<style lang="scss" scoped>
+  @use '../assets/styles/helpers' as *;
+  @use '../assets/styles/settings' as *;
+
+  .trips-page {
+     &__header {
+       display: flex;
+       flex-wrap: wrap;
+       gap: to-rem(16);
+       align-items: stretch;
+       margin-bottom: to-rem(24);
+
+       @include tablet {
+         flex-direction: column;
+         gap: to-rem(12);
+         width: 100%;
+       }
+     }
+
+     &__filter {
+       flex: 0 0 auto;
+       min-width: to-rem(300);
+
+       @include tablet {
+         min-width: 100%;
+         flex: none;
+       }
+
+       .v-text-field {
+         width: 100%;
+       }
+     }
+
+     &__add-btn {
+       display: flex;
+       flex: 0 0 auto;
+
+       @include tablet {
+         width: 100%;
+         margin-top: 0;
+       }
+      }
+
+     &__btn {
+       width: 100%;
+       height: 100%;
+       white-space: nowrap;
+
+       @include tablet {
+         white-space: normal;
+         padding: to-rem(15);
+       }
+     }
+
+     &__list {
+       display: flex;
+       flex-direction: column;
+       gap: to-rem(16);
+     }
+
+     &__card {
+       padding: to-rem(16);
+       transition: all 0.2s ease;
+
+       &:hover {
+         transform: translateY(-2px);
+         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+       }
+     }
+
+     &__route {
+       display: flex;
+       align-items: center;
+       gap: to-rem(8);
+       font-weight: 600;
+       margin-bottom: to-rem(12);
+
+       @include mobile-b {
+         flex-direction: column;
+         text-align: center;
+         gap: to-rem(4);
+
+         .trips-page__arrow {
+           transform: rotate(90deg);
+         }
+       }
+     }
+
+     &__city {
+       font-size: 1.1rem;
+     }
+
+     &__times {
+       display: flex;
+       justify-content: space-between;
+       margin-bottom: 12px;
+
+       @include mobile-b {
+         flex-direction: column;
+         gap: to-rem(8);
+       }
+     }
+
+     &__time-block {
+       display: flex;
+       align-items: baseline;
+       gap: to-rem(8);
+       flex-wrap: wrap;
+
+       &--departure .trips-page__time {
+         font-weight: 500;
+       }
+
+       &--arrival .trips-page__time {
+         font-weight: 500;
+       }
+     }
+
+     &__time {
+       font-size: 1rem;
+     }
+
+     &__date {
+       font-size: 0.75rem;
+       color: gray;
+     }
+
+     &__divider {
+       margin: to-rem(12) 0;
+     }
+
+     &__details {
+       display: flex;
+       gap: to-rem(16);
+       margin-bottom: to-rem(12);
+
+       @include mobile-b {
+         flex-direction: column;
+         gap: to-rem(8);
+       }
+     }
+
+     &__bus, &__driver {
+       display: flex;
+       align-items: center;
+       gap: to-rem(4);
+       font-size: 0.85rem;
+     }
+
+     &__extra {
+       display: flex;
+       justify-content: space-between;
+       align-items: center;
+       margin-bottom: to-rem(12);
+
+       @include mobile-b {
+         flex-direction: column;
+         align-items: flex-start;
+         gap: to-rem(8);
+       }
+     }
+
+     &__travel-time {
+       display: flex;
+       align-items: center;
+       gap: to-rem(4);
+       font-size: 0.85rem;
+     }
+
+     &__actions {
+       display: flex;
+       justify-content: flex-end;
+       gap: to-rem(8);
+       margin-top: to-rem(8);
+     }
+
+     &__empty {
+       text-align: center;
+       padding: to-rem(48) 0;
+       color: gray;
+     }
+
+     &__empty-text {
+       margin-top: to-rem(12);
+     }
+  }
 </style>
+
