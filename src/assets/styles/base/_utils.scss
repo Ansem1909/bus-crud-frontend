@@ -1,4 +1,13 @@
 @use '../helpers' as *;
+@use '../settings' as *;
+
+.page-container {
+  padding: var(--spacing-10) var(--spacing-4);
+
+  @include tablet {
+    padding-block: var(--spacing-6);
+  }
+}
 
 .visually-hidden {
   @include visually-hidden;

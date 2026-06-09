@@ -373,13 +373,13 @@
      &__header {
        display: flex;
        flex-wrap: wrap;
-       gap: to-rem(16);
+       gap: var(--spacing-6);
        align-items: stretch;
-       margin-bottom: to-rem(24);
+       margin-block: var(--spacing-6);
 
        @include tablet {
          flex-direction: column;
-         gap: to-rem(12);
+         gap: var(--spacing-4);
          width: 100%;
        }
      }
@@ -415,18 +415,18 @@
 
        @include tablet {
          white-space: normal;
-         padding: to-rem(15);
+         padding: var(--spacing-4);
        }
      }
 
      &__list {
        display: flex;
        flex-direction: column;
-       gap: to-rem(16);
+       gap: var(--spacing-4);
      }
 
      &__card {
-       padding: to-rem(16);
+       padding: var(--spacing-4);
        transition: all 0.2s ease;
 
        &:hover {
@@ -438,14 +438,14 @@
      &__route {
        display: flex;
        align-items: center;
-       gap: to-rem(8);
+       gap: var(--spacing-2);
        font-weight: 600;
-       margin-bottom: to-rem(12);
+       margin-bottom: var(--spacing-3);
 
        @include mobile-b {
          flex-direction: column;
          text-align: center;
-         gap: to-rem(4);
+         gap: var(--spacing-1);
 
          .trips-page__arrow {
            transform: rotate(90deg);
@@ -460,18 +460,18 @@
      &__times {
        display: flex;
        justify-content: space-between;
-       margin-bottom: 12px;
+       margin-bottom: var(--spacing-3);
 
        @include mobile-b {
          flex-direction: column;
-         gap: to-rem(8);
+         gap: var(--spacing-2);
        }
      }
 
      &__time-block {
        display: flex;
        align-items: baseline;
-       gap: to-rem(8);
+       gap: var(--spacing-2);
        flex-wrap: wrap;
 
        &--departure .trips-page__time {
@@ -493,24 +493,24 @@
      }
 
      &__divider {
-       margin: to-rem(12) 0;
+       margin: var(--spacing-3) 0;
      }
 
      &__details {
        display: flex;
-       gap: to-rem(16);
-       margin-bottom: to-rem(12);
+       gap: var(--spacing-4);
+       margin-bottom: var(--spacing-3);
 
        @include mobile-b {
          flex-direction: column;
-         gap: to-rem(8);
+         gap: var(--spacing-2);
        }
      }
 
      &__bus, &__driver {
        display: flex;
        align-items: center;
-       gap: to-rem(4);
+       gap: var(--spacing-2);
        font-size: 0.85rem;
      }
 
@@ -518,37 +518,37 @@
        display: flex;
        justify-content: space-between;
        align-items: center;
-       margin-bottom: to-rem(12);
+       margin-bottom: var(--spacing-3);
 
        @include mobile-b {
          flex-direction: column;
          align-items: flex-start;
-         gap: to-rem(8);
+         gap: var(--spacing-2);
        }
      }
 
      &__travel-time {
        display: flex;
        align-items: center;
-       gap: to-rem(4);
+       gap:var(--spacing-1);
        font-size: 0.85rem;
      }
 
      &__actions {
        display: flex;
        justify-content: flex-end;
-       gap: to-rem(8);
-       margin-top: to-rem(8);
+       gap: var(--spacing-2);
+       margin-top: var(--spacing-2);
      }
 
      &__empty {
        text-align: center;
-       padding: to-rem(48) 0;
-       color: gray;
+       padding: var(--spacing-8) 0;
+       color: var(--color-text-secondary);
      }
 
      &__empty-text {
-       margin-top: to-rem(12);
+       margin-top: var(--spacing-3);
      }
   }
 </style>

@@ -1,3 +1,5 @@
+@use '../helpers' as *;
+
 :root {
   --font-family-base: 'Inter';
 
@@ -8,4 +10,13 @@
   --color-text-primary: #2C3E50;
   --color-text-secondary: #5D6D7E;
   --color-accent-warning: #FFCF96;
+
+  --spacing-1: #{to-rem(4)};
+  --spacing-2: #{to-rem(8)};
+  --spacing-3: #{to-rem(12)};
+  --spacing-4: #{to-rem(16)};
+  --spacing-5: #{to-rem(24)};
+  --spacing-6: #{to-rem(32)};
+  --spacing-7: #{to-rem(40)};
+  --spacing-8: #{to-rem(48)};
 }
