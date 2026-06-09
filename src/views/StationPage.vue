@@ -2,6 +2,6 @@
 </script>
 <template>
   <v-container>
-    <h1>Каталоги (скоро здесь будет таблица)</h1>
+    <h1>Станции (скоро здесь будет таблица)</h1>
   </v-container>
 </template>
