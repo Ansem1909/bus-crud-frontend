@@ -57,9 +57,9 @@
             <v-list-item-title>{{ item.title }}</v-list-item-title>
           </v-list-item>
 
-          <!-- Пункт с подменю (Справочники) -->
+
           <div v-else>
-            <!-- Сам пункт "Справочники" – кликабельный, открывает/закрывает подменю -->
+
             <v-list-item @click="toggleDirectories">
               <template v-slot:prepend>
                 <v-icon :icon="item.icon"></v-icon>
@@ -67,7 +67,7 @@
               <v-list-item-title>{{ item.title }}</v-list-item-title>
             </v-list-item>
 
-            <!-- Вложенные пункты (показываются, если directoriesOpen = true) -->
+
             <div v-if="directoriesOpen" class="submenu">
               <v-list-item
                 v-for="child in item.children"
@@ -85,7 +85,7 @@
     </v-navigation-drawer>
 
     <v-main>
-      <v-container fluid class="custom-container">
+      <v-container fluid class="page-container">
         <router-view />
       </v-container>
     </v-main>

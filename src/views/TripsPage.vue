@@ -229,7 +229,7 @@
   const maxDate = ref('2026-12-31')
   const clearDate = () => {
     selectedDate.value = ''
-    filterTrips()
+
   }
 
   const onDateSelect = (date) => {
@@ -243,7 +243,7 @@
       selectedDate.value = '';
     }
     dateMenu.value = false;
-    filterTrips();
+
   }
 
   const filteredTrips = computed(() => {
@@ -362,7 +362,7 @@
     }
   }
 
-  const filterTrips = () => {}
+
 </script>
 
 <style lang="scss" scoped>
