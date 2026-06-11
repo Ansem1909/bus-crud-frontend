@@ -53,6 +53,13 @@
         </div>
       </v-card-text>
     </v-card>
+
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
+      {{ snackbar.text }}
+      <template v-slot:actions>
+        <v-btn color="white" variant="text" @click="snackbar.show = false">Закрыть</v-btn>
+      </template>
+    </v-snackbar>
   </div>
 </template>
 
@@ -68,16 +75,17 @@
   const dateFrom = ref('')
   const dateTo = ref('')
   const reportData = ref(null)
+  const snackbar = ref({ show: false, text: '', color: 'error' })
 
   const drivers = computed(() => driverStore.drivers)
 
   const generateReport = () => {
     if (!selectedDriverId.value) {
-      alert('Выберите водителя')
+      snackbar.value = { show: true, text: 'Выберите водителя', color: 'error' }
       return
     }
     if (!dateFrom.value || !dateTo.value) {
-      alert('Укажите период (дата с и по)')
+      snackbar.value = { show: true, text: 'Укажите период (дата с и по)', color: 'error' }
       return
     }
 

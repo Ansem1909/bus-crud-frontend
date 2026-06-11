@@ -78,6 +78,25 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
+      {{ snackbar.text }}
+      <template v-slot:actions>
+        <v-btn color="white" variant="text" @click="snackbar.show = false">Закрыть</v-btn>
+      </template>
+    </v-snackbar>
+
+    <v-dialog v-model="confirmDialog.show" max-width="400">
+      <v-card>
+        <v-card-title>Подтверждение удаления</v-card-title>
+        <v-card-text>Вы уверены, что хотите удалить автобус <strong>{{ confirmDialog.busPlate }}</strong>?</v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn @click="confirmDialog.show = false">Отмена</v-btn>
+          <v-btn color="error" @click="confirmDelete">Удалить</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -94,6 +113,12 @@
   const form = ref({
     plateNumber: '',
     busModelId: null,
+  })
+  const snackbar = ref({ show: false, text: '', color: 'error' })
+  const confirmDialog = ref({
+    show: false,
+    busId: null,
+    busPlate: ''
   })
 
   const openAddDialog = () => {
@@ -113,7 +138,7 @@
 
   const saveBus = () => {
     if (!form.value.plateNumber || !form.value.busModelId) {
-      alert('Заполните все поля')
+      snackbar.value = { show: true, text: 'Заполните все поля', color: 'error' }
       return
     }
     if (isEdit.value) {
@@ -124,10 +149,17 @@
     dialog.value = false
   }
 
-  const deleteBus = (id) => {
-    if (confirm('Удалить автобус?')) {
-      busStore.deleteBus(id)
+  const deleteBus = (id, plateNumber) => {
+    confirmDialog.value = {
+      show: true,
+      busId: id,
+      busPlate: plateNumber
     }
+  }
+
+  const confirmDelete = () => {
+    busStore.deleteBus(confirmDialog.value.busId)
+    confirmDialog.value.show = false
   }
 
   const getBusModelName = (modelId) => {

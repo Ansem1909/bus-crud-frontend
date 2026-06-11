@@ -15,7 +15,7 @@
     >
       <template v-slot:item.actions="{ item }">
         <v-icon size="small" class="me-2" @click="editBusModel(item)">mdi-pencil</v-icon>
-        <v-icon size="small" @click="deleteBusModel(item.id)">mdi-delete</v-icon>
+        <v-icon size="small" @click="deleteBusModel(item.id, item.name)">mdi-delete</v-icon>
       </template>
     </v-data-table>
 
@@ -39,6 +39,25 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
+      {{ snackbar.text }}
+      <template v-slot:actions>
+        <v-btn color="white" variant="text" @click="snackbar.show = false">Закрыть</v-btn>
+      </template>
+    </v-snackbar>
+
+    <v-dialog v-model="confirmDialog.show" max-width="400">
+      <v-card>
+        <v-card-title>Подтверждение удаления</v-card-title>
+        <v-card-text>Вы уверены, что хотите удалить марку <strong>{{ confirmDialog.modelName }}</strong>?</v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn @click="confirmDialog.show = false">Отмена</v-btn>
+          <v-btn color="error" @click="confirmDelete">Удалить</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -58,6 +77,13 @@
   const isEdit = ref(false)
   const form = ref({ name: '' })
 
+  const snackbar = ref({ show: false, text: '', color: 'error' })
+  const confirmDialog = ref({
+    show: false,
+    modelId: null,
+    modelName: ''
+  })
+
   const openAddDialog = () => {
     isEdit.value = false
     form.value = { name: '' }
@@ -72,7 +98,7 @@
 
   const saveBusModel = () => {
     if (!form.value.name) {
-      alert('Введите название марки')
+      snackbar.value = { show: true, text: 'Введите название марки', color: 'error' }
       return
     }
     if (isEdit.value) {
@@ -83,10 +109,17 @@
     dialog.value = false
   }
 
-  const deleteBusModel = (id) => {
-    if (confirm('Удалить марку?')) {
-      busModelStore.deleteBusModel(id)
+  const deleteBusModel = (id, name) => {
+    confirmDialog.value = {
+      show: true,
+      modelId: id,
+      modelName: name
     }
+  }
+
+  const confirmDelete = () => {
+    busModelStore.deleteBusModel(confirmDialog.value.modelId)
+    confirmDialog.value.show = false
   }
 </script>
 

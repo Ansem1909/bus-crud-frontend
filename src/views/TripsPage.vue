@@ -90,7 +90,7 @@
           <v-btn icon variant="text" @click="editTrip(trip)">
             <v-icon>mdi-pencil</v-icon>
           </v-btn>
-          <v-btn icon variant="text" @click="deleteTrip(trip.id)">
+          <v-btn icon variant="text" @click="deleteTrip(trip.id, `${getStationName(trip.departureStationId)} → ${getStationName(trip.arrivalStationId)} ${trip.departureDate}`)">
             <v-icon>mdi-delete</v-icon>
           </v-btn>
         </div>
@@ -200,6 +200,25 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
+      {{ snackbar.text }}
+      <template v-slot:actions>
+        <v-btn color="white" variant="text" @click="snackbar.show = false">Закрыть</v-btn>
+      </template>
+    </v-snackbar>
+
+    <v-dialog v-model="confirmDialog.show" max-width="400">
+      <v-card>
+        <v-card-title>Подтверждение удаления</v-card-title>
+        <v-card-text>Вы уверены, что хотите удалить рейс <strong>{{ confirmDialog.tripInfo }}</strong>?</v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn @click="confirmDialog.show = false">Отмена</v-btn>
+          <v-btn color="error" @click="confirmDelete">Удалить</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -229,8 +248,13 @@
   const maxDate = ref('2026-12-31')
   const clearDate = () => {
     selectedDate.value = ''
-
   }
+  const snackbar = ref({ show: false, text: '', color: 'error' })
+  const confirmDialog = ref({
+    show: false,
+    tripId: null,
+    tripInfo: ''
+  })
 
   const onDateSelect = (date) => {
     if (date) {
@@ -345,7 +369,7 @@
       !form.value.busId || !form.value.driverId ||
       !form.value.departureDate || !form.value.departureTime ||
       !form.value.arrivalDate || !form.value.arrivalTime) {
-      alert('Заполните все поля')
+      snackbar.value = { show: true, text: 'Заполните все поля', color: 'error' }
       return
     }
     if (isEdit.value) {
@@ -356,10 +380,17 @@
     dialog.value = false
   }
 
-  const deleteTrip = (id) => {
-    if (confirm('Удалить этот рейс?')) {
-      tripStore.deleteTrip(id)
+  const deleteTrip = (id, tripInfo) => {
+    confirmDialog.value = {
+      show: true,
+      tripId: id,
+      tripInfo: tripInfo
     }
+  }
+
+  const confirmDelete = () => {
+    tripStore.deleteTrip(confirmDialog.value.tripId)
+    confirmDialog.value.show = false
   }
 
 

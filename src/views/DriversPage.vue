@@ -36,7 +36,7 @@
               <v-btn icon variant="text" @click="editDriver(driver)">
                 <v-icon>mdi-pencil</v-icon>
               </v-btn>
-              <v-btn icon variant="text" @click="deleteDriver(driver.id)">
+              <v-btn icon variant="text" @click="deleteDriver(driver.id, driver.fullName)">
                 <v-icon>mdi-delete</v-icon>
               </v-btn>
             </v-card-actions>
@@ -77,6 +77,25 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
+      {{ snackbar.text }}
+      <template v-slot:actions>
+        <v-btn color="white" variant="text" @click="snackbar.show = false">Закрыть</v-btn>
+      </template>
+    </v-snackbar>
+
+    <v-dialog v-model="confirmDialog.show" max-width="400">
+      <v-card>
+        <v-card-title>Подтверждение удаления</v-card-title>
+        <v-card-text>Вы уверены, что хотите удалить водителя <strong>{{ confirmDialog.driverName }}</strong>?</v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn @click="confirmDialog.show = false">Отмена</v-btn>
+          <v-btn color="error" @click="confirmDelete">Удалить</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -91,6 +110,12 @@
   const form = ref({
     fullName: '',
     birthDate: '',
+  })
+  const snackbar = ref({ show: false, text: '', color: 'error' })
+  const confirmDialog = ref({
+    show: false,
+    driverId: null,
+    driverName: ''
   })
 
   const openAddDialog = () => {
@@ -110,7 +135,7 @@
 
   const saveDriver = () => {
     if (!form.value.fullName || !form.value.birthDate) {
-      alert('Заполните все поля')
+      snackbar.value = { show: true, text: 'Заполните все поля', color: 'error' }
       return
     }
     if (isEdit.value) {
@@ -121,10 +146,17 @@
     dialog.value = false
   }
 
-  const deleteDriver = (id) => {
-    if (confirm('Удалить водителя?')) {
-      driverStore.deleteDriver(id)
+  const deleteDriver = (id, fullName) => {
+    confirmDialog.value = {
+      show: true,
+      driverId: id,
+      driverName: fullName
     }
+  }
+
+  const confirmDelete = () => {
+    driverStore.deleteDriver(confirmDialog.value.driverId)
+    confirmDialog.value.show = false
   }
 
   const calculateAge = (birthDateStr) => {
