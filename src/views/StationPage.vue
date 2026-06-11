@@ -102,7 +102,7 @@
       return
     }
     if (isEdit.value) {
-      stationStore.updateStation(form.value.id, form.value.name)
+      stationStore.updateStation(form.value.id, { name: form.value.name })
     } else {
       stationStore.addStation(form.value.name)
     }

@@ -102,7 +102,7 @@
       return
     }
     if (isEdit.value) {
-      busModelStore.updateBusModel(form.value.id, form.value.name)
+      busModelStore.updateBusModel(form.value.id, { name: form.value.name })
     } else {
       busModelStore.addBusModel(form.value.name)
     }

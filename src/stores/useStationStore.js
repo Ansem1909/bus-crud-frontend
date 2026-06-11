@@ -15,9 +15,9 @@ export const useStationStore = defineStore('stations', () => {
     stations.value.push({ id: newId, name })
   }
 
-  const updateStation = (id, name) => {
+  const updateStation = (id, updated) => {
     const index = stations.value.findIndex(s => s.id === id)
-    if (index !== -1) stations.value[index].name = name
+    if (index !== -1) stations.value[index] = { ...stations.value[index], ...updated }
   }
 
   const deleteStation = (id) => {

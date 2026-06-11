@@ -14,9 +14,9 @@ export const useBusModelStore = defineStore('busModels', () => {
     busModels.value.push({ id: newId, name })
   }
 
-  const updateBusModel = (id, name) => {
+  const updateBusModel = (id, updated) => {
     const index = busModels.value.findIndex(m => m.id === id)
-    if (index !== -1) busModels.value[index].name = name
+    if (index !== -1) busModels.value[index] = { ...busModels.value[index], ...updated }
   }
 
   const deleteBusModel = (id) => {
