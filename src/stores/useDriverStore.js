@@ -3,9 +3,27 @@ import { ref } from 'vue'
 
 export const useDriverStore = defineStore('drivers', () => {
   const drivers = ref([
-    { id: 1, fullName: 'Иванов Иван Иванович', birthDate: '1980-05-15' },
-    { id: 2, fullName: 'Петров Пётр Петрович', birthDate: '1990-08-22' },
-    { id: 3, fullName: 'Сидорова Анна Сергеевна', birthDate: '1985-03-10' },
+    {
+      id: 1,
+      lastName: 'Иванов',
+      firstName: 'Иван',
+      patronymic: 'Иванович',
+      birthDate: '1980-05-15'
+    },
+    {
+      id: 2,
+      lastName: 'Петров',
+      firstName: 'Пётр',
+      patronymic: 'Петрович',
+      birthDate: '1990-08-22'
+    },
+    {
+      id: 3,
+      lastName: 'Сидорова',
+      firstName: 'Анна',
+      patronymic: 'Сергеевна',
+      birthDate: '1985-03-10'
+    },
   ])
 
   const addDriver = (driver) => {
@@ -22,5 +40,16 @@ export const useDriverStore = defineStore('drivers', () => {
     drivers.value = drivers.value.filter(d => d.id !== id)
   }
 
-  return { drivers, addDriver, updateDriver, deleteDriver }
+  const getFullName = (id) => {
+    const driver = drivers.value.find(d => d.id === id)
+    if (!driver) return '—'
+    return `${driver.lastName} ${driver.firstName} ${driver.patronymic}`.trim()
+  }
+
+  const formatFullName = (driver) => {
+    if (!driver) return '—'
+    return `${driver.lastName} ${driver.firstName} ${driver.patronymic}`.trim()
+  }
+
+  return { drivers, addDriver, updateDriver, deleteDriver, getFullName, formatFullName }
 })

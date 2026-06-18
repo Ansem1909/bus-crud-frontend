@@ -1,5 +1,8 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
+import dayjs from 'dayjs';
+import 'dayjs/locale/ru';
+dayjs.locale('ru');
 
 import App from './App.vue';
 import vuetify from './plugins/vuetify';

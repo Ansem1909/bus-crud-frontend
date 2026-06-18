@@ -44,56 +44,59 @@
         class="trips-page__card"
         elevation="2"
       >
-        <div class="trips-page__route">
-          <span class="trips-page__city">{{ getStationName(trip.departureStationId) }}</span>
-          <v-icon class="trips-page__arrow" size="small">mdi-arrow-right</v-icon>
-          <span class="trips-page__city">{{ getStationName(trip.arrivalStationId) }}</span>
-        </div>
-
-        <div class="trips-page__times">
-          <div class="trips-page__time-block trips-page__time-block--departure">
-            <span class="trips-page__time">{{ trip.departureTime }}</span>
-            <span class="trips-page__date">{{ trip.departureDate }}</span>
+        <v-card-title class="pa-4 pb-0 d-flex justify-space-between align-center">
+          <div class="trips-page__route">
+            <span class="trips-page__city">{{ getStationName(trip.departureStationId) }}</span>
+            <v-icon class="trips-page__arrow" size="small">mdi-arrow-right</v-icon>
+            <span class="trips-page__city">{{ getStationName(trip.arrivalStationId) }}</span>
           </div>
-          <div class="trips-page__time-block trips-page__time-block--arrival">
-            <span class="trips-page__time">{{ trip.arrivalTime }}</span>
-            <span class="trips-page__date">{{ trip.arrivalDate }}</span>
+          <div>
+            <v-btn icon variant="text" size="small" @click="editTrip(trip)">
+              <v-icon>mdi-pencil</v-icon>
+            </v-btn>
+            <v-btn icon variant="text" size="small" @click="deleteTrip(trip.id, `${getStationName(trip.departureStationId)} → ${getStationName(trip.arrivalStationId)} ${trip.departureDate}`)">
+              <v-icon>mdi-delete</v-icon>
+            </v-btn>
           </div>
-        </div>
+        </v-card-title>
 
-        <v-divider class="trips-page__divider"></v-divider>
-
-        <div class="trips-page__details">
-          <div class="trips-page__bus">
-            <v-icon size="small" class="trips-page__icon">mdi-bus-side</v-icon>
-            {{ getBusPlate(trip.busId) }} ({{ getBusModelName(trip.busId) }})
+        <v-card-text class="pa-4 pt-2">
+          <div class="trips-page__times">
+            <div class="trips-page__time-block trips-page__time-block--departure">
+              <span class="trips-page__time">{{ trip.departureTime }}</span>
+              <span class="trips-page__date">{{ trip.departureDate }}</span>
+            </div>
+            <div class="trips-page__time-block trips-page__time-block--arrival">
+              <span class="trips-page__time">{{ trip.arrivalTime }}</span>
+              <span class="trips-page__date">{{ trip.arrivalDate }}</span>
+            </div>
           </div>
-          <div class="trips-page__driver">
-            <v-icon size="small" class="trips-page__icon">mdi-account</v-icon>
-            {{ getDriverName(trip.driverId) }}
+
+          <v-divider class="trips-page__divider"></v-divider>
+
+          <div class="trips-page__details">
+            <div class="trips-page__bus">
+              <v-icon size="small" class="trips-page__icon">mdi-bus-side</v-icon>
+              {{ getBusPlate(trip.busId) }} ({{ getBusModelName(trip.busId) }})
+            </div>
+            <div class="trips-page__driver">
+              <v-icon size="small" class="trips-page__icon">mdi-account</v-icon>
+              {{ getDriverName(trip.driverId) }}
+            </div>
           </div>
-        </div>
 
-        <v-divider class="trips-page__divider"></v-divider>
+          <v-divider class="trips-page__divider"></v-divider>
 
-        <div class="trips-page__extra">
-          <div class="trips-page__travel-time">
-            <v-icon size="small" class="trips-page__icon">mdi-clock-outline</v-icon>
-            {{ computeTravelTime(trip) }}
+          <div class="trips-page__extra">
+            <div class="trips-page__travel-time">
+              <v-icon size="small" class="trips-page__icon">mdi-clock-outline</v-icon>
+              {{ computeTravelTime(trip) }}
+            </div>
+            <v-chip :color="getStatusColor(trip)" dark size="small">
+              {{ getStatusText(trip) }}
+            </v-chip>
           </div>
-          <v-chip :color="getStatusColor(trip)" dark size="small">
-            {{ getStatusText(trip) }}
-          </v-chip>
-        </div>
-
-        <div class="trips-page__actions">
-          <v-btn icon variant="text" @click="editTrip(trip)">
-            <v-icon>mdi-pencil</v-icon>
-          </v-btn>
-          <v-btn icon variant="text" @click="deleteTrip(trip.id, `${getStationName(trip.departureStationId)} → ${getStationName(trip.arrivalStationId)} ${trip.departureDate}`)">
-            <v-icon>mdi-delete</v-icon>
-          </v-btn>
-        </div>
+        </v-card-text>
       </v-card>
     </div>
 
