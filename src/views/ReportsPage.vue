@@ -7,9 +7,9 @@
           <v-col cols="12" md="6">
             <v-select
               v-model="selectedDriverId"
-              :items="drivers"
+              :items="driverStore.drivers"
               item-value="id"
-              item-title="fullName"
+              :item-title="driver => `${driver.lastName} ${driver.firstName} ${driver.patronymic}`.trim()"
               label="Выберите водителя"
               clearable
               :rules="[v => !!v || 'Выберите водителя']"
@@ -64,9 +64,10 @@
 </template>
 
 <script setup>
-  import { ref, computed } from 'vue'
+  import { ref } from 'vue'
   import { useDriverStore } from '../stores/useDriverStore'
   import { useTripStore } from '../stores/useTripStore'
+  import dayjs from 'dayjs'
 
   const driverStore = useDriverStore()
   const tripStore = useTripStore()
@@ -76,9 +77,6 @@
   const dateTo = ref('')
   const reportData = ref(null)
   const snackbar = ref({ show: false, text: '', color: 'error' })
-
-  const drivers = computed(() => driverStore.drivers)
-
   const generateReport = () => {
     if (!selectedDriverId.value) {
       snackbar.value = { show: true, text: 'Выберите водителя', color: 'error' }
@@ -89,28 +87,37 @@
       return
     }
 
-    const from = new Date(dateFrom.value)
-    const to = new Date(dateTo.value)
-    to.setHours(23, 59, 59, 999)
+    const from = dayjs(dateFrom.value)
+    const to = dayjs(dateTo.value).endOf('day')
+    if (!from.isValid() || !to.isValid()) {
+      snackbar.value = { show: true, text: 'Некорректный диапазон дат', color: 'error' }
+      return
+    }
 
     const filteredTrips = tripStore.trips.filter(trip => {
-      const tripDate = new Date(trip.departureDate)
-      return trip.driverId === selectedDriverId.value && tripDate >= from && tripDate <= to
+      const tripDate = dayjs(trip.departureDate)
+      return trip.driverId === selectedDriverId.value && tripDate.isBetween(from, to, null, '[]')
     })
 
     let totalTrips = filteredTrips.length
-    let totalHours = 0
+    let totalMinutes = 0
 
     filteredTrips.forEach(trip => {
-      const dep = new Date(`${trip.departureDate}T${trip.departureTime}`)
-      const arr = new Date(`${trip.arrivalDate}T${trip.arrivalTime}`)
-      const hours = (arr - dep) / (1000 * 60 * 60)
-      totalHours += hours
+      const dep = dayjs(`${trip.departureDate}T${trip.departureTime}`)
+      const arr = dayjs(`${trip.arrivalDate}T${trip.arrivalTime}`)
+      const diffMinutes = arr.diff(dep, 'minute')
+      totalMinutes += diffMinutes
     })
+
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    const formattedHours = hours > 0 ? `${hours} ч.` : ''
+    const formattedMinutes = minutes > 0 ? `${minutes} мин.` : ''
+    const totalHoursString = [formattedHours, formattedMinutes].filter(Boolean).join(' ') || '0 мин.'
 
     reportData.value = {
       totalTrips,
-      totalHours: totalHours.toFixed(1)
+      totalHours: totalHoursString
     }
   }
 </script>

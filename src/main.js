@@ -2,7 +2,9 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ru';
+import isBetween from 'dayjs/plugin/isBetween';
 dayjs.locale('ru');
+dayjs.extend(isBetween);
 
 import App from './App.vue';
 import vuetify from './plugins/vuetify';

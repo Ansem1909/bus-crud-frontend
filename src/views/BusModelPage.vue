@@ -1,9 +1,24 @@
 <template>
   <div class="busmodel-page">
-    <div class="busmodel-page__header">
+    <div class="busmodel-page__toolbar">
       <v-btn color="primary" @click="openAddDialog">
-        <v-icon left>mdi-plus</v-icon>
-        Добавить марку
+        <v-icon left>mdi-plus</v-icon> Добавить
+      </v-btn>
+      <v-btn
+        color="primary"
+        variant="outlined"
+        :disabled="!selectedModel"
+        @click="openEditDialog"
+      >
+        <v-icon left>mdi-pencil</v-icon> Редактировать
+      </v-btn>
+      <v-btn
+        color="error"
+        variant="outlined"
+        :disabled="!selectedModel"
+        @click="openDeleteConfirm"
+      >
+        <v-icon left>mdi-delete</v-icon> Удалить
       </v-btn>
     </div>
 
@@ -13,9 +28,16 @@
       item-value="id"
       class="busmodel-table"
     >
-      <template v-slot:item.actions="{ item }">
-        <v-icon size="small" class="me-2" @click="editBusModel(item)">mdi-pencil</v-icon>
-        <v-icon size="small" @click="deleteBusModel(item.id, item.name)">mdi-delete</v-icon>
+      <template v-slot:item="{ item }">
+        <tr
+          :key="item.id"
+          :class="selectedModel && selectedModel.id === item.id ? 'selected-row' : ''"
+          @click="onRowClick(item)"
+          style="cursor: pointer;"
+        >
+          <td>{{ item.id }}</td>
+          <td>{{ item.name }}</td>
+        </tr>
       </template>
     </v-data-table>
 
@@ -28,17 +50,23 @@
           <v-text-field
             v-model="form.name"
             label="Название марки"
-            :rules="[v => !!v || 'Введите название']"
             required
+            :rules="[v => !!v || 'Введите название']"
           />
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn @click="dialog = false">Отмена</v-btn>
-          <v-btn color="primary" @click="saveBusModel">Сохранить</v-btn>
+          <v-btn @click="closeDialog">Отмена</v-btn>
+          <v-btn color="primary" @click="saveModel">Сохранить</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <ConfirmDialog
+      v-model:show="confirmDialog.show"
+      :message="`Удалить марку ${confirmDialog.modelName}?`"
+      @confirmed="confirmDelete"
+    />
 
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
       {{ snackbar.text }}
@@ -47,36 +75,23 @@
       </template>
     </v-snackbar>
 
-    <v-dialog v-model="confirmDialog.show" max-width="400">
-      <v-card>
-        <v-card-title>Подтверждение удаления</v-card-title>
-        <v-card-text>Вы уверены, что хотите удалить марку <strong>{{ confirmDialog.modelName }}</strong>?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn @click="confirmDialog.show = false">Отмена</v-btn>
-          <v-btn color="error" @click="confirmDelete">Удалить</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+
   </div>
 </template>
 
 <script setup>
   import { ref } from 'vue'
   import { useBusModelStore } from '../stores/useBusModelStore'
+  import ConfirmDialog from '../components/common/ConfirmDialog.vue'
 
   const busModelStore = useBusModelStore()
 
-  const headers = [
-    { title: 'ID', key: 'id', sortable: true },
-    { title: 'Название', key: 'name' },
-    { title: 'Действия', key: 'actions', sortable: false },
-  ]
-
+  const selectedModel = ref(null)
   const dialog = ref(false)
   const isEdit = ref(false)
-  const form = ref({ name: '' })
-
+  const form = ref({
+    name: '',
+  })
   const snackbar = ref({ show: false, text: '', color: 'error' })
   const confirmDialog = ref({
     show: false,
@@ -84,42 +99,81 @@
     modelName: ''
   })
 
+  const headers = [
+    { title: 'ID', key: 'id', sortable: true },
+    { title: 'Название', key: 'name', sortable: true },
+  ]
+
+  const onRowClick = (item) => {
+    if (selectedModel.value && selectedModel.value.id === item.id) {
+      selectedModel.value = null
+    } else {
+      selectedModel.value = item
+    }
+  }
+
   const openAddDialog = () => {
     isEdit.value = false
     form.value = { name: '' }
+    selectedModel.value = null
     dialog.value = true
   }
 
-  const editBusModel = (model) => {
+  const openEditDialog = () => {
+    if (!selectedModel.value) return
     isEdit.value = true
-    form.value = { ...model }
+    form.value = {
+      id: selectedModel.value.id,
+      name: selectedModel.value.name || '',
+    }
     dialog.value = true
   }
 
-  const saveBusModel = () => {
+  const closeDialog = () => {
+    dialog.value = false
+  }
+
+  const saveModel = () => {
     if (!form.value.name) {
-      snackbar.value = { show: true, text: 'Введите название марки', color: 'error' }
+      snackbar.value = {
+        show: true,
+        text: 'Введите название марки',
+        color: 'error'
+      }
       return
     }
+
     if (isEdit.value) {
       busModelStore.updateBusModel(form.value.id, { name: form.value.name })
+      const updatedModel = busModelStore.busModels.find(m => m.id === form.value.id)
+      selectedModel.value = updatedModel || null
+      snackbar.value = { show: true, text: 'Марка обновлена', color: 'success' }
     } else {
       busModelStore.addBusModel(form.value.name)
+      const addedModel = busModelStore.busModels[busModelStore.busModels.length - 1]
+      selectedModel.value = addedModel
+      snackbar.value = { show: true, text: 'Марка добавлена', color: 'success' }
     }
     dialog.value = false
   }
 
-  const deleteBusModel = (id, name) => {
+  const openDeleteConfirm = () => {
+    if (!selectedModel.value) return
     confirmDialog.value = {
       show: true,
-      modelId: id,
-      modelName: name
+      modelId: selectedModel.value.id,
+      modelName: selectedModel.value.name
     }
   }
 
   const confirmDelete = () => {
-    busModelStore.deleteBusModel(confirmDialog.value.modelId)
+    const id = confirmDialog.value.modelId
+    busModelStore.deleteBusModel(id)
+    if (selectedModel.value && selectedModel.value.id === id) {
+      selectedModel.value = null
+    }
     confirmDialog.value.show = false
+    snackbar.value = { show: true, text: 'Марка удалена', color: 'success' }
   }
 </script>
 
@@ -129,12 +183,33 @@
   @use '../assets/styles/settings' as *;
 
   .busmodel-page {
-    &__header {
+    &__toolbar {
+      display: flex;
+      gap: var(--spacing-2);
       margin-bottom: var(--spacing-6);
-      text-align: right;
+      flex-wrap: wrap;
     }
+
     .busmodel-table {
       background: var(--color-surface);
+
+      :deep(tr) {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+
+        &:hover {
+          background-color: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+        }
+      }
+
+      :deep(.selected-row) {
+        background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
+        border-left: 4px solid var(--color-primary);
+
+        &:hover {
+          background-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
+        }
+      }
     }
   }
 </style>

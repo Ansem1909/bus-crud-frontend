@@ -74,7 +74,7 @@
             required
             :rules="[requiredRule, dateRangeRule]"
             maxlength="10"
-            @input="applyDateMask"
+            @input="onDateInput"
           />
         </v-card-text>
         <v-card-actions>
@@ -106,7 +106,7 @@
   import { ref } from 'vue'
   import { useDriverStore } from '../stores/useDriverStore'
   import ConfirmDialog from '../components/common/ConfirmDialog.vue'
-  import dayjs from 'dayjs'
+  import { formatDisplayDate, parseDateFromDisplay, calculateAge, validateDateRange, applyDateMask } from '@/utils/date'
 
   const driverStore = useDriverStore()
 
@@ -136,60 +136,16 @@
     { title: 'Возраст', key: 'age', sortable: false },
   ]
 
-  function isValidDate(day, month, year) {
-    const date = new Date(year, month - 1, day)
-    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
-  }
-
-  function parseDateFromDisplay(str) {
-    if (!str) return null
-    const parts = str.split('.')
-    if (parts.length !== 3) return null
-    const day = parseInt(parts[0], 10)
-    const month = parseInt(parts[1], 10)
-    const year = parseInt(parts[2], 10)
-    if (isNaN(day) || isNaN(month) || isNaN(year)) return null
-    if (!isValidDate(day, month, year)) return null
-    return { day, month, year }
-  }
-
   const requiredRule = (v) => !!v || 'Укажите дату рождения'
 
   const dateRangeRule = (v) => {
-    if (!v) return true
-    const parsed = parseDateFromDisplay(v)
-    if (!parsed) return 'Некорректная дата (формат ДД.ММ.ГГГГ)'
-    const { day, month, year } = parsed
-    const dateObj = new Date(year, month - 1, day)
-    const minDate = new Date(1900, 0, 1)
-    const maxDate = new Date(2026, 11, 31)
-    if (dateObj < minDate || dateObj > maxDate) {
-      return 'Дата должна быть между 01.01.1900 и 31.12.2026'
-    }
-    return true
+    const result = validateDateRange(v)
+    if (result === true) return true
+    return result
   }
 
-  const applyDateMask = (event) => {
-    let value = event.target.value.replace(/\D/g, '')
-    if (value.length > 8) value = value.slice(0, 8)
-    let formatted = ''
-    for (let i = 0; i < value.length; i++) {
-      if (i === 2 || i === 4) formatted += '.'
-      formatted += value[i]
-    }
-    displayBirthDate.value = formatted
-  }
-
-  function formatDisplayDate(isoDate) {
-    if (!isoDate) return '—'
-    return dayjs(isoDate).format('DD.MM.YYYY')
-  }
-
-  const calculateAge = (birthDateStr) => {
-    if (!birthDateStr) return '—'
-    const birth = dayjs(birthDateStr)
-    const now = dayjs()
-    return now.diff(birth, 'year')
+  const onDateInput = (event) => {
+    displayBirthDate.value = applyDateMask(event)
   }
 
   const formatFullName = (driver) => {
@@ -261,20 +217,13 @@
     }
 
     const { day, month, year } = parsed
-    const dateObj = new Date(year, month - 1, day)
-    const minDate = new Date(1900, 0, 1)
-    const maxDate = new Date(2026, 11, 31)
+    const isoDate = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
-    if (dateObj < minDate || dateObj > maxDate) {
-      snackbar.value = {
-        show: true,
-        text: 'Дата должна быть между 01.01.1900 и 31.12.2026',
-        color: 'error'
-      }
+    const rangeCheck = validateDateRange(displayBirthDate.value)
+    if (rangeCheck !== true) {
+      snackbar.value = { show: true, text: rangeCheck, color: 'error' }
       return
     }
-
-    const isoDate = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
     const driverData = {
       lastName: form.value.lastName,
@@ -299,6 +248,7 @@
 
   const openDeleteConfirm = () => {
     if (!selectedDriver.value) return
+
     confirmDialog.value = {
       show: true,
       driverId: selectedDriver.value.id,
@@ -337,20 +287,19 @@
         transition: background-color 0.2s ease;
 
         &:hover {
-          background-color: color-mix(in srgb, var(--color-text-primary) 10%, transparent);;
+          background-color: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
         }
 
       }
 
       :deep(.selected-row) {
-        background-color: color-mix(in srgb, var(--color-text-primary) 15%, transparent);
+        background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
         border-left: 4px solid var(--color-primary);
 
         &:hover {
-          background-color: color-mix(in srgb, var(--color-text-primary) 25%, transparent);
+          background-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
         }
       }
-
 
     }
   }

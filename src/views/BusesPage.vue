@@ -1,53 +1,45 @@
 <template>
   <div class="buses-page">
-
-    <div class="buses-page__header">
+    <div class="buses-page__toolbar">
       <v-btn color="primary" @click="openAddDialog">
-        <v-icon left>mdi-plus</v-icon>
-        Добавить автобус
+        <v-icon left>mdi-plus</v-icon> Добавить
+      </v-btn>
+      <v-btn
+        color="primary"
+        variant="outlined"
+        :disabled="!selectedBus"
+        @click="openEditDialog"
+      >
+        <v-icon left>mdi-pencil</v-icon> Редактировать
+      </v-btn>
+      <v-btn
+        color="error"
+        variant="outlined"
+        :disabled="!selectedBus"
+        @click="openDeleteConfirm"
+      >
+        <v-icon left>mdi-delete</v-icon> Удалить
       </v-btn>
     </div>
 
-
-    <div v-if="busStore.buses.length" class="buses-page__list">
-      <v-row>
-        <v-col
-          v-for="bus in busStore.buses"
-          :key="bus.id"
-          cols="12"
-          sm="6"
-          md="4"
-          lg="3"
+    <v-data-table
+      :headers="headers"
+      :items="busStore.buses"
+      item-value="id"
+      class="buses-table"
+    >
+      <template v-slot:item="{ item }">
+        <tr
+          :key="item.id"
+          :class="selectedBus && selectedBus.id === item.id ? 'selected-row' : ''"
+          @click="onRowClick(item)"
+          style="cursor: pointer;"
         >
-          <v-card class="buses-page__card" elevation="2">
-            <v-card-title class="pa-4 pb-0">
-              <div class="bus-plate">{{ bus.plateNumber }}</div>
-            </v-card-title>
-            <v-card-text class="pa-4 pt-2">
-              <div class="bus-model">
-                <v-icon size="small" class="mr-1">mdi-bus-side</v-icon>
-                {{ getBusModelName(bus.busModelId) }}
-              </div>
-            </v-card-text>
-            <v-card-actions class="pa-4 pt-0">
-              <v-spacer></v-spacer>
-              <v-btn icon variant="text" @click="editBus(bus)">
-                <v-icon>mdi-pencil</v-icon>
-              </v-btn>
-              <v-btn icon variant="text" @click="deleteBus(bus.id)">
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-col>
-      </v-row>
-    </div>
-
-    <div v-else class="buses-page__empty">
-      <v-icon size="48" color="gray">mdi-bus-alert</v-icon>
-      <p class="mt-2">Нет автобусов. Добавьте первый.</p>
-    </div>
-
+          <td>{{ item.plateNumber }}</td>
+          <td>{{ getModelName(item.busModelId) }}</td>
+        </tr>
+      </template>
+    </v-data-table>
 
     <v-dialog v-model="dialog" max-width="500">
       <v-card>
@@ -73,11 +65,17 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn @click="dialog = false">Отмена</v-btn>
+          <v-btn @click="closeDialog">Отмена</v-btn>
           <v-btn color="primary" @click="saveBus">Сохранить</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <ConfirmDialog
+      v-model:show="confirmDialog.show"
+      :message="`Удалить автобус ${confirmDialog.busPlate}?`"
+      @confirmed="confirmDelete"
+    />
 
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
       {{ snackbar.text }}
@@ -86,17 +84,7 @@
       </template>
     </v-snackbar>
 
-    <v-dialog v-model="confirmDialog.show" max-width="400">
-      <v-card>
-        <v-card-title>Подтверждение удаления</v-card-title>
-        <v-card-text>Вы уверены, что хотите удалить автобус <strong>{{ confirmDialog.busPlate }}</strong>?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn @click="confirmDialog.show = false">Отмена</v-btn>
-          <v-btn color="error" @click="confirmDelete">Удалить</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+
   </div>
 </template>
 
@@ -104,10 +92,12 @@
   import { ref } from 'vue'
   import { useBusStore } from '../stores/useBusStore'
   import { useBusModelStore } from '../stores/useBusModelStore'
+  import ConfirmDialog from '../components/common/ConfirmDialog.vue'
 
   const busStore = useBusStore()
   const busModelStore = useBusModelStore()
 
+  const selectedBus = ref(null)
   const dialog = ref(false)
   const isEdit = ref(false)
   const form = ref({
@@ -121,50 +111,95 @@
     busPlate: ''
   })
 
+  const headers = [
+    { title: 'Госномер', key: 'plateNumber', sortable: true },
+    { title: 'Марка', key: 'busModelId', sortable: true },
+  ]
+
+  const getModelName = (modelId) => {
+    const model = busModelStore.busModels.find(m => m.id === modelId)
+    return model ? model.name : '—'
+  }
+
+  const onRowClick = (item) => {
+    if (selectedBus.value && selectedBus.value.id === item.id) {
+      selectedBus.value = null
+    } else {
+      selectedBus.value = item
+    }
+  }
+
   const openAddDialog = () => {
     isEdit.value = false
     form.value = {
       plateNumber: '',
       busModelId: null,
     }
+    selectedBus.value = null
     dialog.value = true
   }
 
-  const editBus = (bus) => {
+  const openEditDialog = () => {
+    if (!selectedBus.value) return
     isEdit.value = true
-    form.value = { ...bus }
+    form.value = {
+      id: selectedBus.value.id,
+      plateNumber: selectedBus.value.plateNumber || '',
+      busModelId: selectedBus.value.busModelId || null,
+    }
     dialog.value = true
+  }
+
+  const closeDialog = () => {
+    dialog.value = false
   }
 
   const saveBus = () => {
     if (!form.value.plateNumber || !form.value.busModelId) {
-      snackbar.value = { show: true, text: 'Заполните все поля', color: 'error' }
+      snackbar.value = {
+        show: true,
+        text: 'Заполните все поля',
+        color: 'error'
+      }
       return
     }
+
+    const busData = {
+      plateNumber: form.value.plateNumber,
+      busModelId: form.value.busModelId,
+    }
+
     if (isEdit.value) {
-      busStore.updateBus(form.value.id, form.value)
+      busStore.updateBus(form.value.id, busData)
+      const updatedBus = busStore.buses.find(b => b.id === form.value.id)
+      selectedBus.value = updatedBus || null
+      snackbar.value = { show: true, text: 'Автобус обновлён', color: 'success' }
     } else {
-      busStore.addBus(form.value)
+      busStore.addBus(busData)
+      const addedBus = busStore.buses[busStore.buses.length - 1]
+      selectedBus.value = addedBus
+      snackbar.value = { show: true, text: 'Автобус добавлен', color: 'success' }
     }
     dialog.value = false
   }
 
-  const deleteBus = (id, plateNumber) => {
+  const openDeleteConfirm = () => {
+    if (!selectedBus.value) return
     confirmDialog.value = {
       show: true,
-      busId: id,
-      busPlate: plateNumber
+      busId: selectedBus.value.id,
+      busPlate: selectedBus.value.plateNumber
     }
   }
 
   const confirmDelete = () => {
-    busStore.deleteBus(confirmDialog.value.busId)
+    const id = confirmDialog.value.busId
+    busStore.deleteBus(id)
+    if (selectedBus.value && selectedBus.value.id === id) {
+      selectedBus.value = null
+    }
     confirmDialog.value.show = false
-  }
-
-  const getBusModelName = (modelId) => {
-    const model = busModelStore.busModels.find(m => m.id === modelId)
-    return model ? model.name : '—'
+    snackbar.value = { show: true, text: 'Автобус удалён', color: 'success' }
   }
 </script>
 
@@ -173,39 +208,33 @@
   @use '../assets/styles/settings' as *;
 
   .buses-page {
-    &__header {
+    &__toolbar {
+      display: flex;
+      gap: var(--spacing-2);
       margin-bottom: var(--spacing-6);
-      text-align: right;
+      flex-wrap: wrap;
     }
 
-    &__list {
-      margin-top: var(--spacing-2);
-    }
+    .buses-table {
+      background: var(--color-surface);
 
-    &__card {
-      height: 100%;
-      transition: all 0.2s ease;
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-      }
-      .bus-plate {
-        font-weight: 600;
-        font-size: 1.2rem;
-        word-break: break-word;
-      }
-      .bus-model {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-2);
-        font-size: 0.9rem;
-      }
-    }
+      :deep(tr) {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
 
-    &__empty {
-      text-align: center;
-      padding: var(--spacing-12) 0;
-      color: var(--color-text-secondary);
+        &:hover {
+          background-color: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+        }
+      }
+
+      :deep(.selected-row) {
+        background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
+        border-left: 4px solid var(--color-primary);
+
+        &:hover {
+          background-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
+        }
+      }
     }
   }
 </style>

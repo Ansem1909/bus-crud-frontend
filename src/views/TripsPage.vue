@@ -2,7 +2,13 @@
   <div class="trips-page">
     <div class="trips-page__header">
       <div class="trips-page__filter">
-        <v-menu v-model="dateMenu" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
+        <v-menu
+          v-model="dateMenu"
+          :close-on-content-click="false"
+          transition="scale-transition"
+          offset-y
+          min-width="auto"
+        >
           <template v-slot:activator="{ props }">
             <v-text-field
               v-bind="props"
@@ -54,7 +60,14 @@
             <v-btn icon variant="text" size="small" @click="editTrip(trip)">
               <v-icon>mdi-pencil</v-icon>
             </v-btn>
-            <v-btn icon variant="text" size="small" @click="deleteTrip(trip.id, `${getStationName(trip.departureStationId)} → ${getStationName(trip.arrivalStationId)} ${trip.departureDate}`)">
+            <v-btn
+              icon
+              variant="text"
+              size="small"
+              @click="deleteTrip(
+                trip.id, `${getStationName(trip.departureStationId)} → ${getStationName(trip.arrivalStationId)} ${formatDisplayDate(trip.departureDate)}`
+              )"
+            >
               <v-icon>mdi-delete</v-icon>
             </v-btn>
           </div>
@@ -64,11 +77,11 @@
           <div class="trips-page__times">
             <div class="trips-page__time-block trips-page__time-block--departure">
               <span class="trips-page__time">{{ trip.departureTime }}</span>
-              <span class="trips-page__date">{{ trip.departureDate }}</span>
+              <span class="trips-page__date">{{ formatDisplayDate(trip.departureDate) }}</span>
             </div>
             <div class="trips-page__time-block trips-page__time-block--arrival">
               <span class="trips-page__time">{{ trip.arrivalTime }}</span>
-              <span class="trips-page__date">{{ trip.arrivalDate }}</span>
+              <span class="trips-page__date">{{ formatDisplayDate(trip.arrivalDate) }}</span>
             </div>
           </div>
 
@@ -81,7 +94,7 @@
             </div>
             <div class="trips-page__driver">
               <v-icon size="small" class="trips-page__icon">mdi-account</v-icon>
-              {{ getDriverName(trip.driverId) }}
+              {{ getDriverFullName(trip.driverId) }}
             </div>
           </div>
 
@@ -90,7 +103,7 @@
           <div class="trips-page__extra">
             <div class="trips-page__travel-time">
               <v-icon size="small" class="trips-page__icon">mdi-clock-outline</v-icon>
-              {{ computeTravelTime(trip) }}
+              {{ getTravelTime(trip) }}
             </div>
             <v-chip :color="getStatusColor(trip)" dark size="small">
               {{ getStatusText(trip) }}
@@ -152,7 +165,7 @@
                 label="Водитель"
                 :items="driverStore.drivers"
                 item-value="id"
-                item-title="fullName"
+                :item-title="driver => `${driver.lastName} ${driver.firstName} ${driver.patronymic}`.trim()"
                 v-model="form.driverId"
                 :rules="[v => !!v || 'Выберите водителя']"
                 required
@@ -204,6 +217,12 @@
       </v-card>
     </v-dialog>
 
+    <ConfirmDialog
+      v-model:show="confirmDialog.show"
+      :message="`Удалить рейс ${confirmDialog.tripInfo}?`"
+      @confirmed="confirmDelete"
+    />
+
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
       {{ snackbar.text }}
       <template v-slot:actions>
@@ -211,17 +230,7 @@
       </template>
     </v-snackbar>
 
-    <v-dialog v-model="confirmDialog.show" max-width="400">
-      <v-card>
-        <v-card-title>Подтверждение удаления</v-card-title>
-        <v-card-text>Вы уверены, что хотите удалить рейс <strong>{{ confirmDialog.tripInfo }}</strong>?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn @click="confirmDialog.show = false">Отмена</v-btn>
-          <v-btn color="error" @click="confirmDelete">Удалить</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+
   </div>
 </template>
 
@@ -232,6 +241,9 @@
   import { useBusStore } from '../stores/useBusStore'
   import { useDriverStore } from '../stores/useDriverStore'
   import { useBusModelStore } from '../stores/useBusModelStore'
+  import ConfirmDialog from '../components/common/ConfirmDialog.vue'
+  import { formatDisplayDate, computeTravelTime } from '@/utils/date'
+  import dayjs from 'dayjs'
 
   const tripStore = useTripStore()
   const stationStore = useStationStore()
@@ -283,9 +295,10 @@
     return station ? station.name : '—'
   }
 
-  const getDriverName = (id) => {
+  const getDriverFullName = (id) => {
     const driver = driverStore.drivers.find(d => d.id === id)
-    return driver ? driver.fullName : '—'
+    if (!driver) return '—'
+    return `${driver.lastName} ${driver.firstName} ${driver.patronymic}`.trim()
   }
 
   const getBusPlate = (busId) => {
@@ -311,26 +324,24 @@
     })
   })
 
-  const computeTravelTime = (trip) => {
-    const dep = new Date(`${trip.departureDate}T${trip.departureTime}`)
-    const arr = new Date(`${trip.arrivalDate}T${trip.arrivalTime}`)
-    const diffHours = (arr - dep) / (1000 * 60 * 60)
-    return diffHours.toFixed(1) + ' ч'
+  const getTravelTime = (trip) => {
+    return computeTravelTime(trip.departureDate, trip.departureTime, trip.arrivalDate, trip.arrivalTime)
   }
 
   const getStatusText = (trip) => {
-    const now = new Date()
-    const dep = new Date(`${trip.departureDate}T${trip.departureTime}`)
-    const arr = new Date(`${trip.arrivalDate}T${trip.arrivalTime}`)
+    const now = dayjs()
+    const dep = dayjs(`${trip.departureDate}T${trip.departureTime}`)
+    const arr = dayjs(`${trip.arrivalDate}T${trip.arrivalTime}`)
     if (now >= dep && now < arr) return 'В пути'
     if (now >= arr) return 'Выполнен'
     return 'Ожидает'
   }
+
   const getStatusColor = (trip) => {
     const status = getStatusText(trip)
-    if (status === 'В пути') return 'var(--color-secondary)'
-    if (status === 'Выполнен') return 'var(--color-primary)'
-    return 'var(--color-accent-warning)'
+    if (status === 'В пути') return 'secondary'
+    if (status === 'Выполнен') return 'primary'
+    return 'accent-warning'
   }
 
   const dialog = ref(false)
@@ -404,186 +415,182 @@
   @use '../assets/styles/settings' as *;
 
   .trips-page {
-     &__header {
-       display: flex;
-       flex-wrap: wrap;
-       gap: var(--spacing-6);
-       align-items: stretch;
-       margin-block: var(--spacing-6);
+    &__header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-6);
+      align-items: stretch;
+      margin-block: var(--spacing-6);
 
-       @include tablet {
-         flex-direction: column;
-         gap: var(--spacing-4);
-         width: 100%;
-       }
-     }
+      @include tablet {
+        flex-direction: column;
+        gap: var(--spacing-4);
+        width: 100%;
+      }
+    }
 
-     &__filter {
-       flex: 0 0 auto;
-       min-width: to-rem(300);
+    &__filter {
+      flex: 0 0 auto;
+      min-width: to-rem(300);
 
-       @include tablet {
-         min-width: 100%;
-         flex: none;
-       }
-
-       .v-text-field {
-         width: 100%;
-       }
-     }
-
-     &__add-btn {
-       display: flex;
-       flex: 0 0 auto;
-
-       @include tablet {
-         width: 100%;
-         margin-top: 0;
-       }
+      @include tablet {
+        min-width: 100%;
+        flex: none;
       }
 
-     &__btn {
-       width: 100%;
-       height: 100%;
-       white-space: nowrap;
+      .v-text-field {
+        width: 100%;
+      }
+    }
 
-       @include tablet {
-         white-space: normal;
-         padding: var(--spacing-4);
-       }
-     }
+    &__add-btn {
+      display: flex;
+      flex: 0 0 auto;
 
-     &__list {
-       display: flex;
-       flex-direction: column;
-       gap: var(--spacing-4);
-     }
+      @include tablet {
+        width: 100%;
+        margin-top: 0;
+      }
+    }
 
-     &__card {
-       padding: var(--spacing-4);
-       transition: all 0.2s ease;
+    &__btn {
+      width: 100%;
+      height: 100%;
+      white-space: nowrap;
 
-       &:hover {
-         transform: translateY(-2px);
-         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-       }
-     }
+      @include tablet {
+        white-space: normal;
+        padding: var(--spacing-4);
+      }
+    }
 
-     &__route {
-       display: flex;
-       align-items: center;
-       gap: var(--spacing-2);
-       font-weight: 600;
-       margin-bottom: var(--spacing-3);
+    &__list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-4);
+    }
 
-       @include mobile-b {
-         flex-direction: column;
-         text-align: center;
-         gap: var(--spacing-1);
+    &__card {
+      padding: var(--spacing-4);
+      transition: all 0.2s ease;
 
-         .trips-page__arrow {
-           transform: rotate(90deg);
-         }
-       }
-     }
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      }
+    }
 
-     &__city {
-       font-size: 1.1rem;
-     }
+    &__route {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-2);
+      font-weight: 600;
+      margin-bottom: var(--spacing-3);
 
-     &__times {
-       display: flex;
-       justify-content: space-between;
-       margin-bottom: var(--spacing-3);
+      @include mobile-b {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-1);
 
-       @include mobile-b {
-         flex-direction: column;
-         gap: var(--spacing-2);
-       }
-     }
+        .trips-page__arrow {
+          transform: rotate(90deg);
+        }
+      }
+    }
 
-     &__time-block {
-       display: flex;
-       align-items: baseline;
-       gap: var(--spacing-2);
-       flex-wrap: wrap;
+    &__city {
+      font-size: 1.1rem;
+    }
 
-       &--departure .trips-page__time {
-         font-weight: 500;
-       }
+    &__times {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: var(--spacing-3);
 
-       &--arrival .trips-page__time {
-         font-weight: 500;
-       }
-     }
+      @include mobile-b {
+        flex-direction: column;
+        gap: var(--spacing-2);
+      }
+    }
 
-     &__time {
-       font-size: 1rem;
-     }
+    &__time-block {
+      display: flex;
+      align-items: baseline;
+      gap: var(--spacing-2);
+      flex-wrap: wrap;
 
-     &__date {
-       font-size: 0.75rem;
-       color: gray;
-     }
+      &--departure .trips-page__time {
+        font-weight: 500;
+      }
 
-     &__divider {
-       margin: var(--spacing-3) 0;
-     }
+      &--arrival .trips-page__time {
+        font-weight: 500;
+      }
+    }
 
-     &__details {
-       display: flex;
-       gap: var(--spacing-4);
-       margin-bottom: var(--spacing-3);
+    &__time {
+      font-size: 1rem;
+    }
 
-       @include mobile-b {
-         flex-direction: column;
-         gap: var(--spacing-2);
-       }
-     }
+    &__date {
+      font-size: 0.75rem;
+      color: gray;
+    }
 
-     &__bus, &__driver {
-       display: flex;
-       align-items: center;
-       gap: var(--spacing-2);
-       font-size: 0.85rem;
-     }
+    &__divider {
+      margin: var(--spacing-3) 0;
+    }
 
-     &__extra {
-       display: flex;
-       justify-content: space-between;
-       align-items: center;
-       margin-bottom: var(--spacing-3);
+    &__details {
+      display: flex;
+      gap: var(--spacing-4);
+      margin-bottom: var(--spacing-3);
 
-       @include mobile-b {
-         flex-direction: column;
-         align-items: flex-start;
-         gap: var(--spacing-2);
-       }
-     }
+      @include mobile-b {
+        flex-direction: column;
+        gap: var(--spacing-2);
+      }
+    }
 
-     &__travel-time {
-       display: flex;
-       align-items: center;
-       gap:var(--spacing-1);
-       font-size: 0.85rem;
-     }
+    &__bus,
+    &__driver {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-2);
+      font-size: 0.85rem;
+    }
 
-     &__actions {
-       display: flex;
-       justify-content: flex-end;
-       gap: var(--spacing-2);
-       margin-top: var(--spacing-2);
-     }
+    &__extra {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-3);
 
-     &__empty {
-       text-align: center;
-       padding: var(--spacing-8) 0;
-       color: var(--color-text-secondary);
-     }
+      @include mobile-b {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-2);
+      }
+    }
 
-     &__empty-text {
-       margin-top: var(--spacing-3);
-     }
+    &__travel-time {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-1);
+      font-size: 0.85rem;
+    }
+
+    &__empty {
+      text-align: center;
+      padding: var(--spacing-8) 0;
+      color: var(--color-text-secondary);
+    }
+
+    &__empty-text {
+      margin-top: var(--spacing-3);
+    }
   }
+
 </style>
+
 

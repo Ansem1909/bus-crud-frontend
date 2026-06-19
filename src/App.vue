@@ -45,7 +45,7 @@
     <v-navigation-drawer v-model="drawer" temporary location="right" app>
       <v-list>
         <template v-for="item in menuItems" :key="item.to || item.title">
-          <!-- Обычный пункт (без детей) -->
+
           <v-list-item
             v-if="!item.children"
             :to="item.to"
