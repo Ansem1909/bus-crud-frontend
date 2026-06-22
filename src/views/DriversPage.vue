@@ -103,7 +103,7 @@
 </template>
 
 <script setup>
-  import { ref } from 'vue'
+  import { ref, onMounted } from 'vue'
   import { useDriverStore } from '../stores/useDriverStore'
   import ConfirmDialog from '../components/common/ConfirmDialog.vue'
   import { formatDisplayDate, parseDateFromDisplay, calculateAge, validateDateRange, applyDateMask } from '@/utils/date'
@@ -135,6 +135,10 @@
     { title: 'Дата рождения', key: 'birthDate', sortable: true },
     { title: 'Возраст', key: 'age', sortable: false },
   ]
+
+  onMounted(() => {
+    driverStore.fetchDrivers()
+  })
 
   const requiredRule = (v) => !!v || 'Укажите дату рождения'
 
@@ -196,23 +200,15 @@
     dialog.value = false
   }
 
-  const saveDriver = () => {
+  const saveDriver = async () => {
     if (!form.value.lastName || !form.value.firstName || !displayBirthDate.value) {
-      snackbar.value = {
-        show: true,
-        text: 'Заполните обязательные поля (Фамилия, Имя, Дата рождения)',
-        color: 'error'
-      }
+      snackbar.value = { show: true, text: 'Заполните обязательные поля (Фамилия, Имя, Дата рождения)', color: 'error' }
       return
     }
 
     const parsed = parseDateFromDisplay(displayBirthDate.value)
     if (!parsed) {
-      snackbar.value = {
-        show: true,
-        text: 'Некорректная дата (формат ДД.ММ.ГГГГ)',
-        color: 'error'
-      }
+      snackbar.value = { show: true, text: 'Некорректная дата (формат ДД.ММ.ГГГГ)', color: 'error' }
       return
     }
 
@@ -232,18 +228,19 @@
       birthDate: isoDate,
     }
 
-    if (isEdit.value) {
-      driverStore.updateDriver(form.value.id, driverData)
-      const updatedDriver = driverStore.drivers.find(d => d.id === form.value.id)
-      selectedDriver.value = updatedDriver || null
-      snackbar.value = { show: true, text: 'Водитель обновлён', color: 'success' }
-    } else {
-      driverStore.addDriver(driverData)
-      const addedDriver = driverStore.drivers[driverStore.drivers.length - 1]
-      selectedDriver.value = addedDriver
-      snackbar.value = { show: true, text: 'Водитель добавлен', color: 'success' }
+    try {
+      if (isEdit.value) {
+        await driverStore.updateDriver(form.value.id, driverData)
+        snackbar.value = { show: true, text: 'Водитель обновлён', color: 'success' }
+      } else {
+        await driverStore.addDriver(driverData)
+        snackbar.value = { show: true, text: 'Водитель добавлен', color: 'success' }
+      }
+      dialog.value = false
+      await driverStore.fetchDrivers()
+    } catch (error) {
+      snackbar.value = { show: true, text: error.response?.data || 'Ошибка сохранения', color: 'error' }
     }
-    dialog.value = false
   }
 
   const openDeleteConfirm = () => {
@@ -256,14 +253,19 @@
     }
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     const id = confirmDialog.value.driverId
-    driverStore.deleteDriver(id)
-    if (selectedDriver.value && selectedDriver.value.id === id) {
-      selectedDriver.value = null
+    try {
+      await driverStore.deleteDriver(id)
+      if (selectedDriver.value && selectedDriver.value.id === id) {
+        selectedDriver.value = null
+      }
+      confirmDialog.value.show = false
+      snackbar.value = { show: true, text: 'Водитель удалён', color: 'success' }
+      await driverStore.fetchDrivers()
+    } catch (error) {
+      snackbar.value = { show: true, text: error.response?.data || 'Ошибка удаления', color: 'error' }
     }
-    confirmDialog.value.show = false
-    snackbar.value = { show: true, text: 'Водитель удалён', color: 'success' }
   }
 </script>
 

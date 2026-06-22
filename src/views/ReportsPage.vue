@@ -64,20 +64,24 @@
 </template>
 
 <script setup>
-  import { ref } from 'vue'
+  import { ref, onMounted } from 'vue'
   import { useDriverStore } from '../stores/useDriverStore'
-  import { useTripStore } from '../stores/useTripStore'
-  import dayjs from 'dayjs'
+  import api from '@/api/axios'
 
   const driverStore = useDriverStore()
-  const tripStore = useTripStore()
+
 
   const selectedDriverId = ref(null)
   const dateFrom = ref('')
   const dateTo = ref('')
   const reportData = ref(null)
   const snackbar = ref({ show: false, text: '', color: 'error' })
-  const generateReport = () => {
+
+  onMounted(() => {
+    driverStore.fetchDrivers()
+  })
+
+  const generateReport = async () => {
     if (!selectedDriverId.value) {
       snackbar.value = { show: true, text: 'Выберите водителя', color: 'error' }
       return
@@ -87,37 +91,17 @@
       return
     }
 
-    const from = dayjs(dateFrom.value)
-    const to = dayjs(dateTo.value).endOf('day')
-    if (!from.isValid() || !to.isValid()) {
-      snackbar.value = { show: true, text: 'Некорректный диапазон дат', color: 'error' }
-      return
-    }
-
-    const filteredTrips = tripStore.trips.filter(trip => {
-      const tripDate = dayjs(trip.departureDate)
-      return trip.driverId === selectedDriverId.value && tripDate.isBetween(from, to, null, '[]')
-    })
-
-    let totalTrips = filteredTrips.length
-    let totalMinutes = 0
-
-    filteredTrips.forEach(trip => {
-      const dep = dayjs(`${trip.departureDate}T${trip.departureTime}`)
-      const arr = dayjs(`${trip.arrivalDate}T${trip.arrivalTime}`)
-      const diffMinutes = arr.diff(dep, 'minute')
-      totalMinutes += diffMinutes
-    })
-
-    const hours = Math.floor(totalMinutes / 60)
-    const minutes = totalMinutes % 60
-    const formattedHours = hours > 0 ? `${hours} ч.` : ''
-    const formattedMinutes = minutes > 0 ? `${minutes} мин.` : ''
-    const totalHoursString = [formattedHours, formattedMinutes].filter(Boolean).join(' ') || '0 мин.'
-
-    reportData.value = {
-      totalTrips,
-      totalHours: totalHoursString
+    try {
+      const response = await api.post('/Reports/driver', {
+        driverId: selectedDriverId.value,
+        dateFrom: dateFrom.value,
+        dateTo: dateTo.value
+      })
+      reportData.value = response.data
+      snackbar.value = { show: false }
+    } catch (error) {
+      reportData.value = null
+      snackbar.value = { show: true, text: error.response?.data || 'Ошибка формирования отчёта', color: 'error' }
     }
   }
 </script>

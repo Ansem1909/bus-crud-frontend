@@ -80,7 +80,7 @@
 </template>
 
 <script setup>
-  import { ref } from 'vue'
+  import { ref, onMounted } from 'vue'
   import { useBusModelStore } from '../stores/useBusModelStore'
   import ConfirmDialog from '../components/common/ConfirmDialog.vue'
 
@@ -103,6 +103,10 @@
     { title: 'ID', key: 'id', sortable: true },
     { title: 'Название', key: 'name', sortable: true },
   ]
+
+  onMounted(() => {
+    busModelStore.fetchBusModels()
+  })
 
   const onRowClick = (item) => {
     if (selectedModel.value && selectedModel.value.id === item.id) {
@@ -133,28 +137,25 @@
     dialog.value = false
   }
 
-  const saveModel = () => {
+  const saveModel = async () => {
     if (!form.value.name) {
-      snackbar.value = {
-        show: true,
-        text: 'Введите название марки',
-        color: 'error'
-      }
+      snackbar.value = { show: true, text: 'Введите название марки', color: 'error' }
       return
     }
 
-    if (isEdit.value) {
-      busModelStore.updateBusModel(form.value.id, { name: form.value.name })
-      const updatedModel = busModelStore.busModels.find(m => m.id === form.value.id)
-      selectedModel.value = updatedModel || null
-      snackbar.value = { show: true, text: 'Марка обновлена', color: 'success' }
-    } else {
-      busModelStore.addBusModel(form.value.name)
-      const addedModel = busModelStore.busModels[busModelStore.busModels.length - 1]
-      selectedModel.value = addedModel
-      snackbar.value = { show: true, text: 'Марка добавлена', color: 'success' }
+    try {
+      if (isEdit.value) {
+        await busModelStore.updateBusModel(form.value.id, { name: form.value.name })
+        snackbar.value = { show: true, text: 'Марка обновлена', color: 'success' }
+      } else {
+        await busModelStore.addBusModel(form.value.name)
+        snackbar.value = { show: true, text: 'Марка добавлена', color: 'success' }
+      }
+      dialog.value = false
+      await busModelStore.fetchBusModels()
+    } catch (error) {
+      snackbar.value = { show: true, text: error.response?.data || 'Ошибка сохранения', color: 'error' }
     }
-    dialog.value = false
   }
 
   const openDeleteConfirm = () => {
@@ -166,14 +167,19 @@
     }
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     const id = confirmDialog.value.modelId
-    busModelStore.deleteBusModel(id)
-    if (selectedModel.value && selectedModel.value.id === id) {
-      selectedModel.value = null
+    try {
+      await busModelStore.deleteBusModel(id)
+      if (selectedModel.value && selectedModel.value.id === id) {
+        selectedModel.value = null
+      }
+      confirmDialog.value.show = false
+      snackbar.value = { show: true, text: 'Марка удалена', color: 'success' }
+      await busModelStore.fetchBusModels()
+    } catch (error) {
+      snackbar.value = { show: true, text: error.response?.data || 'Ошибка удаления', color: 'error' }
     }
-    confirmDialog.value.show = false
-    snackbar.value = { show: true, text: 'Марка удалена', color: 'success' }
   }
 </script>
 

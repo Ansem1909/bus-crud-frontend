@@ -1,56 +1,62 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
+import api from '@/api/axios';
 
 export const useTripStore = defineStore('trips', () => {
-  const trips = ref([
-    {
-      id: 1,
-      departureStationId: 1,
-      arrivalStationId: 2,
-      busId: 1,
-      driverId: 1,
-      departureDate: '2025-06-10',
-      departureTime: '08:00',
-      arrivalDate: '2025-06-10',
-      arrivalTime: '12:30',
-    },
-    {
-      id: 2,
-      departureStationId: 2,
-      arrivalStationId: 3,
-      busId: 2,
-      driverId: 2,
-      departureDate: '2025-06-10',
-      departureTime: '14:00',
-      arrivalDate: '2025-06-10',
-      arrivalTime: '18:45',
-    },
-    {
-      id: 3,
-      departureStationId: 1,
-      arrivalStationId: 4,
-      busId: 3,
-      driverId: 3,
-      departureDate: '2025-06-11',
-      departureTime: '09:00',
-      arrivalDate: '2025-06-11',
-      arrivalTime: '15:20',
-    },
-  ])
+  const trips = ref([]);
+  const loading = ref(false);
+  const error = ref(null);
 
-  const addTrip = (trip) => {
-    const newId = Math.max(...trips.value.map(t => t.id), 0) + 1
-    trips.value.push({ ...trip, id: newId })
-  }
+  const fetchTrips = async (date = null) => {
+    loading.value = true;
+    try {
+      let url = '/Trips';
+      if (date) {
+        url += `?date=${date}`;
+      }
+      const response = await api.get(url);
+      trips.value = response.data;
+    } catch (err) {
+      error.value = err.message;
+      console.error('Ошибка загрузки рейсов:', err);
+    } finally {
+      loading.value = false;
+    }
+  };
 
-  const updateTrip = (id, updated) => {
-    const index = trips.value.findIndex(t => t.id === id)
-    if (index !== -1) trips.value[index] = { ...updated, id }
-  }
+  const addTrip = async (tripData) => {
+    try {
+      const response = await api.post('/Trips', tripData);
+      trips.value.push(response.data);
+      return response.data;
+    } catch (err) {
+      console.error('Ошибка добавления рейса:', err);
+      throw err;
+    }
+  };
 
-  const deleteTrip = (id) => {
-    trips.value = trips.value.filter(t => t.id !== id)
-  }
+  const updateTrip = async (id, tripData) => {
+    try {
+      await api.put(`/Trips/${id}`, { ...tripData, id });
+      const index = trips.value.findIndex(t => t.id === id);
+      if (index !== -1) {
+        trips.value[index] = { ...trips.value[index], ...tripData };
+      }
+    } catch (err) {
+      console.error('Ошибка обновления рейса:', err);
+      throw err;
+    }
+  };
 
-  return { trips, addTrip, updateTrip, deleteTrip }
-})
+  const deleteTrip = async (id) => {
+    try {
+      await api.delete(`/Trips/${id}`);
+      trips.value = trips.value.filter(t => t.id !== id);
+    } catch (err) {
+      console.error('Ошибка удаления рейса:', err);
+      throw err;
+    }
+  };
+
+  return { trips, loading, error, fetchTrips, addTrip, updateTrip, deleteTrip };
+});

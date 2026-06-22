@@ -24,8 +24,6 @@
           <v-date-picker
             :model-value="selectedDate ? new Date(selectedDate) : null"
             @update:model-value="onDateSelect"
-            :min="minDate ? new Date(minDate) : undefined"
-            :max="maxDate ? new Date(maxDate) : undefined"
             :first-day-of-week="1"
             locale="ru"
           />
@@ -235,7 +233,7 @@
 </template>
 
 <script setup>
-  import { ref, computed } from 'vue'
+  import { ref, computed, onMounted } from 'vue'
   import { useTripStore } from '../stores/useTripStore'
   import { useStationStore } from '../stores/useStationStore'
   import { useBusStore } from '../stores/useBusStore'
@@ -254,16 +252,25 @@
   const selectedDate = ref(new Date().toISOString().slice(0, 10))
   const dateMenu = ref(false)
   const formattedSelectedDate = computed(() => {
+
     if (!selectedDate.value) return ''
     const [year, month, day] = selectedDate.value.split('-')
     const date = new Date(year, month - 1, day)
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
   })
-  const minDate = ref(new Date().toISOString().slice(0, 10))
-  const maxDate = ref('2026-12-31')
+
+  onMounted(() => {
+    tripStore.fetchTrips(selectedDate.value)
+    stationStore.fetchStations()
+    busStore.fetchBuses()
+    driverStore.fetchDrivers()
+    busModelStore.fetchBusModels()
+  })
+
   const clearDate = () => {
     selectedDate.value = ''
   }
+
   const snackbar = ref({ show: false, text: '', color: 'error' })
   const confirmDialog = ref({
     show: false,
@@ -282,13 +289,10 @@
       selectedDate.value = '';
     }
     dateMenu.value = false;
-
+    tripStore.fetchTrips(selectedDate.value || undefined)
   }
 
-  const filteredTrips = computed(() => {
-    if (!selectedDate.value) return tripStore.trips
-    return tripStore.trips.filter(trip => trip.departureDate === selectedDate.value)
-  })
+  const filteredTrips = computed(() => tripStore.trips)
 
   const getStationName = (id) => {
     const station = stationStore.stations.find(s => s.id === id)
@@ -378,7 +382,7 @@
     dialog.value = true
   }
 
-  const saveTrip = () => {
+  const saveTrip = async () => {
     if (!form.value.departureStationId || !form.value.arrivalStationId ||
       !form.value.busId || !form.value.driverId ||
       !form.value.departureDate || !form.value.departureTime ||
@@ -386,12 +390,19 @@
       snackbar.value = { show: true, text: 'Заполните все поля', color: 'error' }
       return
     }
-    if (isEdit.value) {
-      tripStore.updateTrip(form.value.id, form.value)
-    } else {
-      tripStore.addTrip(form.value)
+    try {
+      if (isEdit.value) {
+        await tripStore.updateTrip(form.value.id, form.value)
+        snackbar.value = { show: true, text: 'Рейс обновлён', color: 'success' }
+      } else {
+        await tripStore.addTrip(form.value)
+        snackbar.value = { show: true, text: 'Рейс добавлен', color: 'success' }
+      }
+      dialog.value = false
+      await tripStore.fetchTrips(selectedDate.value)
+    } catch (error) {
+      snackbar.value = { show: true, text: error.response?.data || 'Ошибка сохранения', color: 'error' }
     }
-    dialog.value = false
   }
 
   const deleteTrip = (id, tripInfo) => {
@@ -402,9 +413,15 @@
     }
   }
 
-  const confirmDelete = () => {
-    tripStore.deleteTrip(confirmDialog.value.tripId)
-    confirmDialog.value.show = false
+  const confirmDelete = async () => {
+    try {
+      await tripStore.deleteTrip(confirmDialog.value.tripId)
+      confirmDialog.value.show = false
+      snackbar.value = { show: true, text: 'Рейс удалён', color: 'success' }
+      await tripStore.fetchTrips(selectedDate.value)
+    } catch (error) {
+      snackbar.value = { show: true, text: error.response?.data || 'Ошибка удаления', color: 'error' }
+    }
   }
 
 

@@ -80,7 +80,7 @@
 </template>
 
 <script setup>
-  import { ref } from 'vue'
+  import { ref, onMounted } from 'vue'
   import { useStationStore } from '../stores/useStationStore'
   import ConfirmDialog from '../components/common/ConfirmDialog.vue'
 
@@ -103,6 +103,10 @@
     { title: 'ID', key: 'id', sortable: true },
     { title: 'Название', key: 'name', sortable: true },
   ]
+
+  onMounted(() => {
+    stationStore.fetchStations()
+  })
 
   const onRowClick = (item) => {
     if (selectedStation.value && selectedStation.value.id === item.id) {
@@ -133,28 +137,25 @@
     dialog.value = false
   }
 
-  const saveStation = () => {
+  const saveStation = async () => {
     if (!form.value.name) {
-      snackbar.value = {
-        show: true,
-        text: 'Введите название станции',
-        color: 'error'
-      }
+      snackbar.value = { show: true, text: 'Введите название станции', color: 'error' }
       return
     }
 
-    if (isEdit.value) {
-      stationStore.updateStation(form.value.id, { name: form.value.name })
-      const updatedStation = stationStore.stations.find(s => s.id === form.value.id)
-      selectedStation.value = updatedStation || null
-      snackbar.value = { show: true, text: 'Станция обновлена', color: 'success' }
-    } else {
-      stationStore.addStation(form.value.name)
-      const addedStation = stationStore.stations[stationStore.stations.length - 1]
-      selectedStation.value = addedStation
-      snackbar.value = { show: true, text: 'Станция добавлена', color: 'success' }
+    try {
+      if (isEdit.value) {
+        await stationStore.updateStation(form.value.id, { name: form.value.name })
+        snackbar.value = { show: true, text: 'Станция обновлена', color: 'success' }
+      } else {
+        await stationStore.addStation(form.value.name)
+        snackbar.value = { show: true, text: 'Станция добавлена', color: 'success' }
+      }
+      dialog.value = false
+      await stationStore.fetchStations()
+    } catch (error) {
+      snackbar.value = { show: true, text: error.response?.data || 'Ошибка сохранения', color: 'error' }
     }
-    dialog.value = false
   }
 
   const openDeleteConfirm = () => {
@@ -166,14 +167,19 @@
     }
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     const id = confirmDialog.value.stationId
-    stationStore.deleteStation(id)
-    if (selectedStation.value && selectedStation.value.id === id) {
-      selectedStation.value = null
+    try {
+      await stationStore.deleteStation(id)
+      if (selectedStation.value && selectedStation.value.id === id) {
+        selectedStation.value = null
+      }
+      confirmDialog.value.show = false
+      snackbar.value = { show: true, text: 'Станция удалена', color: 'success' }
+      await stationStore.fetchStations()
+    } catch (error) {
+      snackbar.value = { show: true, text: error.response?.data || 'Ошибка удаления', color: 'error' }
     }
-    confirmDialog.value.show = false
-    snackbar.value = { show: true, text: 'Станция удалена', color: 'success' }
   }
 </script>
 

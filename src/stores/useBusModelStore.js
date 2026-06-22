@@ -1,27 +1,58 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
+import api from '@/api/axios';
 
 export const useBusModelStore = defineStore('busModels', () => {
-  const busModels = ref([
-    { id: 1, name: 'ЛиАЗ' },
-    { id: 2, name: 'МАЗ' },
-    { id: 3, name: 'Neoplan' },
-    { id: 4, name: 'Setra' },
-  ])
+  const busModels = ref([]);
+  const loading = ref(false);
+  const error = ref(null);
 
-  const addBusModel = (name) => {
-    const newId = Math.max(...busModels.value.map(m => m.id), 0) + 1
-    busModels.value.push({ id: newId, name })
-  }
+  const fetchBusModels = async () => {
+    loading.value = true;
+    try {
+      const response = await api.get('/BusModels');
+      busModels.value = response.data;
+    } catch (err) {
+      error.value = err.message;
+      console.error('Ошибка загрузки марок:', err);
+    } finally {
+      loading.value = false;
+    }
+  };
 
-  const updateBusModel = (id, updated) => {
-    const index = busModels.value.findIndex(m => m.id === id)
-    if (index !== -1) busModels.value[index] = { ...busModels.value[index], ...updated }
-  }
+  const addBusModel = async (name) => {
+    try {
+      const response = await api.post('/BusModels', { name });
+      busModels.value.push(response.data);
+      return response.data;
+    } catch (err) {
+      console.error('Ошибка добавления марки:', err);
+      throw err;
+    }
+  };
 
-  const deleteBusModel = (id) => {
-    busModels.value = busModels.value.filter(m => m.id !== id)
-  }
+  const updateBusModel = async (id, updated) => {
+    try {
+      await api.put(`/BusModels/${id}`, { ...updated, id });
+      const index = busModels.value.findIndex(m => m.id === id);
+      if (index !== -1) {
+        busModels.value[index] = { ...busModels.value[index], ...updated };
+      }
+    } catch (err) {
+      console.error('Ошибка обновления марки:', err);
+      throw err;
+    }
+  };
 
-  return { busModels, addBusModel, updateBusModel, deleteBusModel }
+  const deleteBusModel = async (id) => {
+    try {
+      await api.delete(`/BusModels/${id}`);
+      busModels.value = busModels.value.filter(m => m.id !== id);
+    } catch (err) {
+      console.error('Ошибка удаления марки:', err);
+      throw err;
+    }
+  };
+
+  return { busModels, loading, error, fetchBusModels, addBusModel, updateBusModel, deleteBusModel };
 })

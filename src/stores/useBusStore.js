@@ -1,26 +1,59 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
+import api from '@/api/axios';
 
 export const useBusStore = defineStore('buses', () => {
-  const buses = ref([
-    { id: 1, plateNumber: 'А123ВС', busModelId: 1 },
-    { id: 2, plateNumber: 'В456ЕК', busModelId: 2 },
-    { id: 3, plateNumber: 'С789НМ', busModelId: 3 },
-  ])
+  const buses = ref([]);
+  const loading = ref(false);
+  const error = ref(null);
 
-  const addBus = (bus) => {
-    const newId = Math.max(...buses.value.map(b => b.id), 0) + 1
-    buses.value.push({ ...bus, id: newId })
-  }
+  const fetchBuses = async () => {
+    loading.value = true;
+    try {
+      const response = await api.get('/Buses');
+      buses.value = response.data;
+      error.value = null;
+    } catch (err) {
+      error.value = err.message;
+      console.error('Ошибка загрузки автобусов:', err);
+    } finally {
+      loading.value = false;
+    }
+  };
 
-  const updateBus = (id, updated) => {
-    const index = buses.value.findIndex(b => b.id === id)
-    if (index !== -1) buses.value[index] = { ...updated, id }
-  }
+  const addBus = async (busData) => {
+    try {
+      const response = await api.post('/Buses', busData);
+      buses.value.push(response.data);
+      return response.data;
+    } catch (err) {
+      console.error('Ошибка добавления автобуса:', err);
+      throw err;
+    }
+  };
 
-  const deleteBus = (id) => {
-    buses.value = buses.value.filter(b => b.id !== id)
-  }
+  const updateBus = async (id, busData) => {
+    try {
+      await api.put(`/Buses/${id}`, { ...busData, id });
+      const index = buses.value.findIndex(b => b.id === id);
+      if (index !== -1) {
+        buses.value[index] = { ...buses.value[index], ...busData };
+      }
+    } catch (err) {
+      console.error('Ошибка обновления автобуса:', err);
+      throw err;
+    }
+  };
 
-  return { buses, addBus, updateBus, deleteBus }
-})
+  const deleteBus = async (id) => {
+    try {
+      await api.delete(`/Buses/${id}`);
+      buses.value = buses.value.filter(b => b.id !== id);
+    } catch (err) {
+      console.error('Ошибка удаления автобуса:', err);
+      throw err;
+    }
+  };
+
+  return { buses, loading, error, fetchBuses, addBus, updateBus, deleteBus };
+});
