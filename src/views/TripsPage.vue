@@ -101,10 +101,18 @@
           <div class="trips-page__extra">
             <div class="trips-page__travel-time">
               <v-icon size="small" class="trips-page__icon">mdi-clock-outline</v-icon>
-              {{ getTravelTime(trip) }}
+              {{ trip.travelTime }}
             </div>
-            <v-chip :color="getStatusColor(trip)" dark size="small">
-              {{ getStatusText(trip) }}
+            <v-chip
+              :color="
+                trip.status === 'В пути' ? 'secondary' :
+                trip.status === 'Выполнен' ? 'primary' :
+                'accent-warning'
+              "
+              dark
+              size="small"
+            >
+              {{ trip.status }}
             </v-chip>
           </div>
         </v-card-text>
@@ -240,8 +248,7 @@
   import { useDriverStore } from '../stores/useDriverStore'
   import { useBusModelStore } from '../stores/useBusModelStore'
   import ConfirmDialog from '../components/common/ConfirmDialog.vue'
-  import { formatDisplayDate, computeTravelTime } from '@/utils/date'
-  import dayjs from 'dayjs'
+  import { formatDisplayDate } from '@/utils/date'
 
   const tripStore = useTripStore()
   const stationStore = useStationStore()
@@ -328,26 +335,6 @@
     })
   })
 
-  const getTravelTime = (trip) => {
-    return computeTravelTime(trip.departureDate, trip.departureTime, trip.arrivalDate, trip.arrivalTime)
-  }
-
-  const getStatusText = (trip) => {
-    const now = dayjs()
-    const dep = dayjs(`${trip.departureDate}T${trip.departureTime}`)
-    const arr = dayjs(`${trip.arrivalDate}T${trip.arrivalTime}`)
-    if (now >= dep && now < arr) return 'В пути'
-    if (now >= arr) return 'Выполнен'
-    return 'Ожидает'
-  }
-
-  const getStatusColor = (trip) => {
-    const status = getStatusText(trip)
-    if (status === 'В пути') return 'secondary'
-    if (status === 'Выполнен') return 'primary'
-    return 'accent-warning'
-  }
-
   const dialog = ref(false)
   const isEdit = ref(false)
   const form = ref({
@@ -423,7 +410,6 @@
       snackbar.value = { show: true, text: error.response?.data || 'Ошибка удаления', color: 'error' }
     }
   }
-
 
 </script>
 

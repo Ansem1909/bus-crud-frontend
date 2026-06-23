@@ -40,7 +40,7 @@
           <td>{{ item.firstName }}</td>
           <td>{{ item.patronymic }}</td>
           <td>{{ formatDisplayDate(item.birthDate) }}</td>
-          <td>{{ calculateAge(item.birthDate) }}</td>
+          <td>{{ item.age }}</td>
         </tr>
       </template>
     </v-data-table>
@@ -106,7 +106,7 @@
   import { ref, onMounted } from 'vue'
   import { useDriverStore } from '../stores/useDriverStore'
   import ConfirmDialog from '../components/common/ConfirmDialog.vue'
-  import { formatDisplayDate, parseDateFromDisplay, calculateAge, validateDateRange, applyDateMask } from '@/utils/date'
+  import { formatDisplayDate, parseDateFromDisplay, validateDateRange, applyDateMask } from '@/utils/date'
 
   const driverStore = useDriverStore()
 
