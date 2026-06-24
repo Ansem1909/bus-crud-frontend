@@ -1,24 +1,30 @@
 <template>
   <div class="buses-page">
     <div class="buses-page__toolbar">
-      <v-btn color="primary" @click="openAddDialog">
-        <v-icon left>mdi-plus</v-icon> Добавить
+      <v-btn
+        color="primary"
+        prepend-icon="mdi-plus"
+        @click="openAddDialog"
+      >
+        Добавить
       </v-btn>
       <v-btn
         color="primary"
         variant="outlined"
+        prepend-icon="mdi-pencil"
         :disabled="!selectedBus"
         @click="openEditDialog"
       >
-        <v-icon left>mdi-pencil</v-icon> Редактировать
+        Редактировать
       </v-btn>
       <v-btn
         color="error"
         variant="outlined"
+        prepend-icon="mdi-delete"
         :disabled="!selectedBus"
         @click="openDeleteConfirm"
       >
-        <v-icon left>mdi-delete</v-icon> Удалить
+        Удалить
       </v-btn>
     </div>
 
@@ -31,8 +37,11 @@
       <template v-slot:item="{ item }">
         <tr
           :key="item.id"
-          :class="selectedBus && selectedBus.id === item.id ? 'selected-row' : ''"
+          :data-id="item.id"
+          :tabindex="0"
+          :class="selectedBus?.id === item.id ? 'selected-row' : ''"
           @click="onRowClick(item)"
+          @keydown="onRowKeydown($event, item)"
           style="cursor: pointer;"
         >
           <td>{{ item.plateNumber }}</td>
@@ -84,7 +93,6 @@
       </template>
     </v-snackbar>
 
-
   </div>
 </template>
 
@@ -93,6 +101,7 @@
   import { useBusStore } from '../stores/useBusStore'
   import { useBusModelStore } from '../stores/useBusModelStore'
   import ConfirmDialog from '../components/common/ConfirmDialog.vue'
+  import { useTableKeyboard } from '../composables/useTableKeyboard'
 
   const busStore = useBusStore()
   const busModelStore = useBusModelStore()
@@ -117,10 +126,12 @@
     { title: 'Марка', key: 'busModelId', sortable: true },
   ]
 
-  onMounted(() => {
-    busStore.fetchBuses();
-    busModelStore.fetchBusModels();
-  });
+  onMounted(async () => {
+    await Promise.all([
+      busStore.fetchBuses(),
+      busModelStore.fetchBusModels(),
+    ])
+  })
 
   const getModelName = (modelId) => {
     const model = busModelStore.busModels.find(m => m.id === modelId)
@@ -128,10 +139,10 @@
   }
 
   const onRowClick = (item) => {
-    if (selectedBus.value && selectedBus.value.id === item.id) {
+    if (selectedBus.value?.id === item.id) {
       selectedBus.value = null
     } else {
-      selectedBus.value = item
+      selectedBus.value = { ...item }
     }
   }
 
@@ -187,30 +198,42 @@
   }
 
   const openDeleteConfirm = () => {
+    console.log('openDeleteConfirm')
+
     if (!selectedBus.value) return
-    confirmDialog.value = {
-      show: true,
-      busId: selectedBus.value.id,
-      busPlate: selectedBus.value.plateNumber
-    }
+
+    confirmDialog.value.busId = selectedBus.value.id
+    confirmDialog.value.busPlate = selectedBus.value.plateNumber
+    confirmDialog.value.show = true
+
+    console.log('confirmDialog', confirmDialog.value)
   }
 
   const confirmDelete = async () => {
     const id = confirmDialog.value.busId
     try {
       await busStore.deleteBus(id)
-      if (selectedBus.value && selectedBus.value.id === id) {
-        selectedBus.value = null
-      }
+      selectedBus.value = null
       confirmDialog.value.show = false
-      snackbar.value = { show: true, text: 'Автобус удалён', color: 'success' }
+      snackbar.value.text = 'Автобус удалён'
+      snackbar.value.color = 'success'
+      snackbar.value.show = true
       await busStore.fetchBuses()
     } catch (error) {
-      const message = error.response?.data || 'Ошибка удаления'
-      snackbar.value = { show: true, text: message, color: 'error' }
+      snackbar.value.text = error.response?.data || 'Ошибка удаления'
+      snackbar.value.color = 'error'
+      snackbar.value.show = true
       confirmDialog.value.show = false
     }
   }
+
+  const { onRowKeydown } = useTableKeyboard({
+    selectedItem: selectedBus,
+    onSelect: onRowClick,
+    onDelete: openDeleteConfirm,
+    tableSelector: '.buses-table',
+  })
+
 </script>
 
 <style lang="scss" scoped>
