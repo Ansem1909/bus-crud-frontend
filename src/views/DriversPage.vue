@@ -1,24 +1,30 @@
 <template>
   <div class="drivers-page">
     <div class="drivers-page__toolbar">
-      <v-btn color="primary" @click="openAddDialog">
-        <v-icon left>mdi-plus</v-icon> Добавить
+      <v-btn
+        color="primary"
+        prepend-icon="mdi-plus"
+        @click="openAddDialog"
+      >
+        Добавить
       </v-btn>
       <v-btn
         color="primary"
         variant="outlined"
+        prepend-icon="mdi-pencil"
         :disabled="!selectedDriver"
         @click="openEditDialog"
       >
-        <v-icon left>mdi-pencil</v-icon> Редактировать
+        Редактировать
       </v-btn>
       <v-btn
         color="error"
         variant="outlined"
+        prepend-icon="mdi-delete"
         :disabled="!selectedDriver"
         @click="openDeleteConfirm"
       >
-        <v-icon left>mdi-delete</v-icon> Удалить
+        Удалить
       </v-btn>
 
     </div>
@@ -32,8 +38,11 @@
       <template v-slot:item="{ item }">
         <tr
           :key="item.id"
-          :class="selectedDriver && selectedDriver.id === item.id ? 'selected-row' : ''"
+          :data-id="item.id"
+          :tabindex="0"
+          :class="selectedDriver?.id === item.id ? 'selected-row' : ''"
           @click="onRowClick(item)"
+          @keydown="onRowKeydown($event, item)"
           style="cursor: pointer;"
         >
           <td>{{ item.lastName }}</td>
@@ -107,6 +116,7 @@
   import { useDriverStore } from '../stores/useDriverStore'
   import ConfirmDialog from '../components/common/ConfirmDialog.vue'
   import { formatDisplayDate, parseDateFromDisplay, validateDateRange, applyDateMask } from '@/utils/date'
+  import { useTableKeyboard } from '../composables/useTableKeyboard'
 
   const driverStore = useDriverStore()
 
@@ -157,10 +167,10 @@
   }
 
   const onRowClick = (item) => {
-    if (selectedDriver.value && selectedDriver.value.id === item.id) {
+    if (selectedDriver.value?.id === item.id) {
       selectedDriver.value = null
     } else {
-      selectedDriver.value = item
+      selectedDriver.value = { ...item }
     }
   }
 
@@ -267,6 +277,13 @@
       snackbar.value = { show: true, text: error.response?.data || 'Ошибка удаления', color: 'error' }
     }
   }
+
+  const { onRowKeydown } = useTableKeyboard({
+    selectedItem: selectedDriver,
+    onSelect: onRowClick,
+    onDelete: openDeleteConfirm,
+    tableSelector: '.drivers-table',
+  })
 </script>
 
 <style lang="scss" scoped>

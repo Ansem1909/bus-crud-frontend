@@ -1,24 +1,30 @@
 <template>
   <div class="station-page">
     <div class="station-page__toolbar">
-      <v-btn color="primary" @click="openAddDialog">
-        <v-icon left>mdi-plus</v-icon> Добавить
+      <v-btn
+        color="primary"
+        prepend-icon="mdi-plus"
+        @click="openAddDialog"
+      >
+        Добавить
       </v-btn>
       <v-btn
         color="primary"
         variant="outlined"
+        prepend-icon="mdi-pencil"
         :disabled="!selectedStation"
         @click="openEditDialog"
       >
-        <v-icon left>mdi-pencil</v-icon> Редактировать
+        Редактировать
       </v-btn>
       <v-btn
         color="error"
         variant="outlined"
+        prepend-icon="mdi-delete"
         :disabled="!selectedStation"
         @click="openDeleteConfirm"
       >
-        <v-icon left>mdi-delete</v-icon> Удалить
+        Удалить
       </v-btn>
     </div>
 
@@ -31,8 +37,11 @@
       <template v-slot:item="{ item }">
         <tr
           :key="item.id"
-          :class="selectedStation && selectedStation.id === item.id ? 'selected-row' : ''"
+          :data-id="item.id"
+          :tabindex="0"
+          :class="selectedStation?.id === item.id ? 'selected-row' : ''"
           @click="onRowClick(item)"
+          @keydown="onRowKeydown($event, item)"
           style="cursor: pointer;"
         >
           <td>{{ item.id }}</td>
@@ -83,6 +92,7 @@
   import { ref, onMounted } from 'vue'
   import { useStationStore } from '../stores/useStationStore'
   import ConfirmDialog from '../components/common/ConfirmDialog.vue'
+  import { useTableKeyboard } from '../composables/useTableKeyboard'
 
   const stationStore = useStationStore()
 
@@ -109,10 +119,10 @@
   })
 
   const onRowClick = (item) => {
-    if (selectedStation.value && selectedStation.value.id === item.id) {
+    if (selectedStation.value?.id === item.id) {
       selectedStation.value = null
     } else {
-      selectedStation.value = item
+      selectedStation.value = { ...item }
     }
   }
 
@@ -181,6 +191,13 @@
       snackbar.value = { show: true, text: error.response?.data || 'Ошибка удаления', color: 'error' }
     }
   }
+
+  const { onRowKeydown } = useTableKeyboard({
+    selectedItem: selectedStation,
+    onSelect: onRowClick,
+    onDelete: openDeleteConfirm,
+    tableSelector: '.station-table',
+  })
 </script>
 
 <style lang="scss" scoped>

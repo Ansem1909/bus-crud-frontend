@@ -1,24 +1,30 @@
 <template>
   <div class="busmodel-page">
     <div class="busmodel-page__toolbar">
-      <v-btn color="primary" @click="openAddDialog">
-        <v-icon left>mdi-plus</v-icon> Добавить
+      <v-btn
+        color="primary"
+        @click="openAddDialog"
+        prepend-icon="mdi-plus"
+      >
+        Добавить
       </v-btn>
       <v-btn
         color="primary"
         variant="outlined"
+        prepend-icon="mdi-pencil"
         :disabled="!selectedModel"
         @click="openEditDialog"
       >
-        <v-icon left>mdi-pencil</v-icon> Редактировать
+        Редактировать
       </v-btn>
       <v-btn
         color="error"
         variant="outlined"
+        prepend-icon="mdi-delete"
         :disabled="!selectedModel"
         @click="openDeleteConfirm"
       >
-        <v-icon left>mdi-delete</v-icon> Удалить
+        Удалить
       </v-btn>
     </div>
 
@@ -31,8 +37,11 @@
       <template v-slot:item="{ item }">
         <tr
           :key="item.id"
-          :class="selectedModel && selectedModel.id === item.id ? 'selected-row' : ''"
+          :data-id="item.id"
+          :tabindex="0"
+          :class="selectedModel?.id === item.id ? 'selected-row' : ''"
           @click="onRowClick(item)"
+          @keydown="onRowKeydown($event, item)"
           style="cursor: pointer;"
         >
           <td>{{ item.id }}</td>
@@ -83,6 +92,7 @@
   import { ref, onMounted } from 'vue'
   import { useBusModelStore } from '../stores/useBusModelStore'
   import ConfirmDialog from '../components/common/ConfirmDialog.vue'
+  import { useTableKeyboard } from '../composables/useTableKeyboard'
 
   const busModelStore = useBusModelStore()
 
@@ -109,10 +119,10 @@
   })
 
   const onRowClick = (item) => {
-    if (selectedModel.value && selectedModel.value.id === item.id) {
+    if (selectedModel.value?.id === item.id) {
       selectedModel.value = null
     } else {
-      selectedModel.value = item
+      selectedModel.value = { ...item }
     }
   }
 
@@ -181,6 +191,13 @@
       snackbar.value = { show: true, text: error.response?.data || 'Ошибка удаления', color: 'error' }
     }
   }
+
+  const { onRowKeydown } = useTableKeyboard({
+    selectedItem: selectedModel,
+    onSelect: onRowClick,
+    onDelete: openDeleteConfirm,
+    tableSelector: '.busmodel-table',
+  })
 </script>
 
 
